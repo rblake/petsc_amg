@@ -1,0 +1,624 @@
+# ParaView State Version 2.4
+
+set kw(vtkTemp2) [$Application GetMainWindow]
+set kw(vtkTemp76) [$kw(vtkTemp2) GetMainView]
+set kw(vtkTemp1003) [$kw(vtkTemp2) GetAnimationManager]
+[$kw(vtkTemp2) GetRotateCameraButton] SetSelectedState 1
+$kw(vtkTemp2) ChangeInteractorStyle 1
+
+# Glyph Sources
+$kw(vtkTemp848) SetValue 6
+$kw(vtkTemp854) SetValue 0.1
+$kw(vtkTemp860) SetValue 0.35
+$kw(vtkTemp866) SetValue 6
+$kw(vtkTemp872) SetValue 0.03
+$kw(vtkTemp847) AcceptCallback
+$kw(vtkTemp879) SetValue 6
+$kw(vtkTemp885) SetValue 0.5
+$kw(vtkTemp890) SetValue 1
+$kw(vtkTemp895) SetSelectedState 1
+$kw(vtkTemp878) AcceptCallback
+$kw(vtkTemp899) SetValue 1
+$kw(vtkTemp904) SetValue 1
+$kw(vtkTemp909) SetValue 1
+$kw(vtkTemp914) SetValue 0 0 0
+$kw(vtkTemp898) AcceptCallback
+$kw(vtkTemp917) SetVisibility 1
+$kw(vtkTemp917) SetPoint1 -0.5 0 0
+$kw(vtkTemp917) SetPoint2 0.5 0 0
+$kw(vtkTemp917) SetResolution 0
+$kw(vtkTemp935) SetValue 6
+$kw(vtkTemp916) AcceptCallback
+$kw(vtkTemp941) SetValue 0 0 0
+$kw(vtkTemp943) SetValue 0.5
+$kw(vtkTemp948) SetValue 8
+$kw(vtkTemp954) SetValue 0
+$kw(vtkTemp960) SetValue 360
+$kw(vtkTemp966) SetValue 8
+$kw(vtkTemp972) SetValue 0
+$kw(vtkTemp978) SetValue 180
+$kw(vtkTemp940) AcceptCallback
+$kw(vtkTemp985) SelectCallback {Arrow} {9}
+$kw(vtkTemp989) SetSelectedState 0
+$kw(vtkTemp992) SetValue 0 0 0
+$kw(vtkTemp984) AcceptCallback
+
+set kw(vtkTemp1004) [$kw(vtkTemp2) InitializeReadCustom "legacyreader" "/home/alber/research/code/hypre-1.10.0b/visualize/cgrid0.vtk"]
+$kw(vtkTemp2) ReadFileInformation $kw(vtkTemp1004) "/home/alber/research/code/hypre-1.10.0b/visualize/cgrid0.vtk"
+$kw(vtkTemp2) FinalizeRead $kw(vtkTemp1004) "/home/alber/research/code/hypre-1.10.0b/visualize/cgrid0.vtk"
+$kw(vtkTemp1004) SetLabel {cgrid0.vtk}
+$kw(vtkTemp1005) SetValue "/home/alber/research/code/hypre-1.10.0b/visualize/cgrid0.vtk"
+$kw(vtkTemp1004) AcceptCallback
+# Saving state of the Display Proxy associated with the source
+set pvDisp(vtkTemp1004) [$kw(vtkTemp1004) GetDisplayProxy] 
+[$pvDisp(vtkTemp1004) GetProperty LODResolution] SetElement 0 50
+[$pvDisp(vtkTemp1004) GetProperty Representation] SetElement 0 2
+[$pvDisp(vtkTemp1004) GetProperty Visibility] SetElement 0 1
+[$pvDisp(vtkTemp1004) GetProperty ColorSpace] SetElement 0 0
+[$pvDisp(vtkTemp1004) GetProperty HSVWrap] SetElement 0 0
+[$pvDisp(vtkTemp1004) GetProperty UseStrips] SetElement 0 0
+[$pvDisp(vtkTemp1004) GetProperty ColorArray] SetElement 0 {C/F}
+[$pvDisp(vtkTemp1004) GetProperty ColorMode] SetElement 0 0
+[$pvDisp(vtkTemp1004) GetProperty ImmediateModeRendering] SetElement 0 1
+[$pvDisp(vtkTemp1004) GetProperty InterpolateScalarsBeforeMapping] SetElement 0 1
+[$pvDisp(vtkTemp1004) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1004) GetProperty ScalarVisibility] SetElement 0 0
+[$pvDisp(vtkTemp1004) GetProperty UseLookupTableScalarRange] SetElement 0 1
+[$pvDisp(vtkTemp1004) GetProperty Orientation] SetElement 0 0
+[$pvDisp(vtkTemp1004) GetProperty Orientation] SetElement 1 0
+[$pvDisp(vtkTemp1004) GetProperty Orientation] SetElement 2 0
+[$pvDisp(vtkTemp1004) GetProperty Origin] SetElement 0 0
+[$pvDisp(vtkTemp1004) GetProperty Origin] SetElement 1 0
+[$pvDisp(vtkTemp1004) GetProperty Origin] SetElement 2 0
+[$pvDisp(vtkTemp1004) GetProperty Position] SetElement 0 0
+[$pvDisp(vtkTemp1004) GetProperty Position] SetElement 1 0
+[$pvDisp(vtkTemp1004) GetProperty Position] SetElement 2 0
+[$pvDisp(vtkTemp1004) GetProperty Scale] SetElement 0 1
+[$pvDisp(vtkTemp1004) GetProperty Scale] SetElement 1 1
+[$pvDisp(vtkTemp1004) GetProperty Scale] SetElement 2 1
+[$pvDisp(vtkTemp1004) GetProperty Color] SetElement 0 0.129412
+[$pvDisp(vtkTemp1004) GetProperty Color] SetElement 1 0.137255
+[$pvDisp(vtkTemp1004) GetProperty Color] SetElement 2 0.12549
+[$pvDisp(vtkTemp1004) GetProperty Interpolation] SetElement 0 1
+[$pvDisp(vtkTemp1004) GetProperty LineWidth] SetElement 0 1
+[$pvDisp(vtkTemp1004) GetProperty Opacity] SetElement 0 1
+[$pvDisp(vtkTemp1004) GetProperty PointSize] SetElement 0 1
+[$pvDisp(vtkTemp1004) GetProperty Specular] SetElement 0 0.1
+[$pvDisp(vtkTemp1004) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1004) GetProperty SelectScalarArray] SetElement 0 {}
+[$pvDisp(vtkTemp1004) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1004) GetProperty SelectScalarArray] SetElement 0 {}
+[$pvDisp(vtkTemp1004) GetProperty ScalarOpacityUnitDistance] SetElement 0 1
+[$pvDisp(vtkTemp1004) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1004) GetProperty SelectScalarArray] SetElement 0 {}
+$pvDisp(vtkTemp1004) UpdateVTKObjects
+[$kw(vtkTemp1004) GetPVOutput] Update
+[$kw(vtkTemp1004) GetPVOutput] ColorByProperty
+$kw(vtkTemp941) SetValue 0 0 0
+$kw(vtkTemp943) SetValue 0.5
+$kw(vtkTemp948) SetValue 8
+$kw(vtkTemp954) SetValue 0
+$kw(vtkTemp960) SetValue 360
+$kw(vtkTemp966) SetValue 8
+$kw(vtkTemp972) SetValue 0
+$kw(vtkTemp978) SetValue 180
+$kw(vtkTemp940) AcceptCallback
+$kw(vtkTemp2) SetCurrentPVSourceCallback $kw(vtkTemp1004)
+set kw(vtkTemp1139) [$kw(vtkTemp2) CreatePVSource Glyph]
+$kw(vtkTemp1139) SetLabel {Glyph0}
+$kw(vtkTemp1140) SetCurrentValue $kw(vtkTemp1004)
+$kw(vtkTemp1143) SetCurrentValue $kw(vtkTemp940)
+$kw(vtkTemp1155) SetOrientMode {Off}
+$kw(vtkTemp1155) SetScaleMode {Data Scaling Off}
+$kw(vtkTemp1155) SetScalars {C/F}
+$kw(vtkTemp1155) SetVectors {None}
+$kw(vtkTemp1155) SetScaleFactor 0.015
+$kw(vtkTemp1158) SetValue 100000
+$kw(vtkTemp1163) SetSelectedState 1
+$kw(vtkTemp1166) SetSelectedState 1
+$kw(vtkTemp1139) AcceptCallback
+# Saving state of the Display Proxy associated with the source
+set pvDisp(vtkTemp1139) [$kw(vtkTemp1139) GetDisplayProxy] 
+[$pvDisp(vtkTemp1139) GetProperty LODResolution] SetElement 0 50
+[$pvDisp(vtkTemp1139) GetProperty Representation] SetElement 0 2
+[$pvDisp(vtkTemp1139) GetProperty Visibility] SetElement 0 0
+[$pvDisp(vtkTemp1139) GetProperty UseStrips] SetElement 0 0
+[$pvDisp(vtkTemp1139) GetProperty ColorArray] SetElement 0 {CR_Rates}
+[$pvDisp(vtkTemp1139) GetProperty ColorMode] SetElement 0 0
+[$pvDisp(vtkTemp1139) GetProperty ImmediateModeRendering] SetElement 0 1
+[$pvDisp(vtkTemp1139) GetProperty InterpolateScalarsBeforeMapping] SetElement 0 1
+[$pvDisp(vtkTemp1139) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1139) GetProperty ScalarVisibility] SetElement 0 1
+[$pvDisp(vtkTemp1139) GetProperty UseLookupTableScalarRange] SetElement 0 1
+[$pvDisp(vtkTemp1139) GetProperty Orientation] SetElement 0 0
+[$pvDisp(vtkTemp1139) GetProperty Orientation] SetElement 1 0
+[$pvDisp(vtkTemp1139) GetProperty Orientation] SetElement 2 0
+[$pvDisp(vtkTemp1139) GetProperty Origin] SetElement 0 0
+[$pvDisp(vtkTemp1139) GetProperty Origin] SetElement 1 0
+[$pvDisp(vtkTemp1139) GetProperty Origin] SetElement 2 0
+[$pvDisp(vtkTemp1139) GetProperty Position] SetElement 0 0
+[$pvDisp(vtkTemp1139) GetProperty Position] SetElement 1 0
+[$pvDisp(vtkTemp1139) GetProperty Position] SetElement 2 0
+[$pvDisp(vtkTemp1139) GetProperty Scale] SetElement 0 1
+[$pvDisp(vtkTemp1139) GetProperty Scale] SetElement 1 1
+[$pvDisp(vtkTemp1139) GetProperty Scale] SetElement 2 1
+[$pvDisp(vtkTemp1139) GetProperty Color] SetElement 0 1
+[$pvDisp(vtkTemp1139) GetProperty Color] SetElement 1 1
+[$pvDisp(vtkTemp1139) GetProperty Color] SetElement 2 1
+[$pvDisp(vtkTemp1139) GetProperty Interpolation] SetElement 0 1
+[$pvDisp(vtkTemp1139) GetProperty LineWidth] SetElement 0 1
+[$pvDisp(vtkTemp1139) GetProperty Opacity] SetElement 0 1
+[$pvDisp(vtkTemp1139) GetProperty PointSize] SetElement 0 1
+[$pvDisp(vtkTemp1139) GetProperty Specular] SetElement 0 0
+$pvDisp(vtkTemp1139) UpdateVTKObjects
+[$kw(vtkTemp1139) GetPVOutput] ColorByArray {CR_Rates} 3
+$kw(vtkTemp2) SetCurrentPVSourceCallback $kw(vtkTemp1139)
+set kw(vtkTemp1527) [$kw(vtkTemp2) CreatePVSource Clip]
+$kw(vtkTemp1527) SetLabel {Clip2}
+$kw(vtkTemp1528) SetCurrentValue $kw(vtkTemp1139)
+$kw(vtkTemp1629) SetCurrentValue {Plane}
+$kw(vtkTemp1539) SetVisibility 1
+$kw(vtkTemp1539) SetCenter 0.228 0.44942 0.38466
+$kw(vtkTemp1539) SetNormal 0 1 0
+$kw(vtkTemp1630) SetSelectedState 0
+$kw(vtkTemp1527) AcceptCallback
+# Saving state of the Display Proxy associated with the source
+set pvDisp(vtkTemp1527) [$kw(vtkTemp1527) GetDisplayProxy] 
+[$pvDisp(vtkTemp1527) GetProperty LODResolution] SetElement 0 50
+[$pvDisp(vtkTemp1527) GetProperty Representation] SetElement 0 2
+[$pvDisp(vtkTemp1527) GetProperty Visibility] SetElement 0 1
+[$pvDisp(vtkTemp1527) GetProperty ColorSpace] SetElement 0 0
+[$pvDisp(vtkTemp1527) GetProperty HSVWrap] SetElement 0 0
+[$pvDisp(vtkTemp1527) GetProperty UseStrips] SetElement 0 0
+[$pvDisp(vtkTemp1527) GetProperty ColorArray] SetElement 0 {Partitions}
+[$pvDisp(vtkTemp1527) GetProperty ColorMode] SetElement 0 0
+[$pvDisp(vtkTemp1527) GetProperty ImmediateModeRendering] SetElement 0 1
+[$pvDisp(vtkTemp1527) GetProperty InterpolateScalarsBeforeMapping] SetElement 0 1
+[$pvDisp(vtkTemp1527) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1527) GetProperty ScalarVisibility] SetElement 0 1
+[$pvDisp(vtkTemp1527) GetProperty UseLookupTableScalarRange] SetElement 0 1
+[$pvDisp(vtkTemp1527) GetProperty Orientation] SetElement 0 0
+[$pvDisp(vtkTemp1527) GetProperty Orientation] SetElement 1 0
+[$pvDisp(vtkTemp1527) GetProperty Orientation] SetElement 2 0
+[$pvDisp(vtkTemp1527) GetProperty Origin] SetElement 0 0
+[$pvDisp(vtkTemp1527) GetProperty Origin] SetElement 1 0
+[$pvDisp(vtkTemp1527) GetProperty Origin] SetElement 2 0
+[$pvDisp(vtkTemp1527) GetProperty Position] SetElement 0 0
+[$pvDisp(vtkTemp1527) GetProperty Position] SetElement 1 0
+[$pvDisp(vtkTemp1527) GetProperty Position] SetElement 2 0
+[$pvDisp(vtkTemp1527) GetProperty Scale] SetElement 0 1
+[$pvDisp(vtkTemp1527) GetProperty Scale] SetElement 1 1
+[$pvDisp(vtkTemp1527) GetProperty Scale] SetElement 2 1
+[$pvDisp(vtkTemp1527) GetProperty Color] SetElement 0 1
+[$pvDisp(vtkTemp1527) GetProperty Color] SetElement 1 1
+[$pvDisp(vtkTemp1527) GetProperty Color] SetElement 2 1
+[$pvDisp(vtkTemp1527) GetProperty Interpolation] SetElement 0 1
+[$pvDisp(vtkTemp1527) GetProperty LineWidth] SetElement 0 1
+[$pvDisp(vtkTemp1527) GetProperty Opacity] SetElement 0 1
+[$pvDisp(vtkTemp1527) GetProperty PointSize] SetElement 0 1
+[$pvDisp(vtkTemp1527) GetProperty Specular] SetElement 0 0
+[$pvDisp(vtkTemp1527) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1527) GetProperty SelectScalarArray] SetElement 0 {}
+[$pvDisp(vtkTemp1527) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1527) GetProperty SelectScalarArray] SetElement 0 {}
+[$pvDisp(vtkTemp1527) GetProperty ScalarOpacityUnitDistance] SetElement 0 1
+[$pvDisp(vtkTemp1527) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1527) GetProperty SelectScalarArray] SetElement 0 {}
+$pvDisp(vtkTemp1527) UpdateVTKObjects
+[$kw(vtkTemp1527) GetPVOutput] ColorByArray {Partitions} 3
+$kw(vtkTemp2) SetCurrentPVSourceCallback $kw(vtkTemp1139)
+set kw(vtkTemp1701) [$kw(vtkTemp2) CreatePVSource Clip]
+$kw(vtkTemp1701) SetLabel {Clip4}
+$kw(vtkTemp1702) SetCurrentValue $kw(vtkTemp1139)
+$kw(vtkTemp1803) SetCurrentValue {Plane}
+$kw(vtkTemp1713) SetVisibility 1
+$kw(vtkTemp1713) SetCenter -0.43495 -0.096264 -0.44923
+$kw(vtkTemp1713) SetNormal 0 0 -1
+$kw(vtkTemp1804) SetSelectedState 0
+$kw(vtkTemp1701) AcceptCallback
+# Saving state of the Display Proxy associated with the source
+set pvDisp(vtkTemp1701) [$kw(vtkTemp1701) GetDisplayProxy] 
+[$pvDisp(vtkTemp1701) GetProperty LODResolution] SetElement 0 50
+[$pvDisp(vtkTemp1701) GetProperty Representation] SetElement 0 2
+[$pvDisp(vtkTemp1701) GetProperty Visibility] SetElement 0 1
+[$pvDisp(vtkTemp1701) GetProperty ColorSpace] SetElement 0 0
+[$pvDisp(vtkTemp1701) GetProperty HSVWrap] SetElement 0 0
+[$pvDisp(vtkTemp1701) GetProperty UseStrips] SetElement 0 0
+[$pvDisp(vtkTemp1701) GetProperty ColorArray] SetElement 0 {Partitions}
+[$pvDisp(vtkTemp1701) GetProperty ColorMode] SetElement 0 0
+[$pvDisp(vtkTemp1701) GetProperty ImmediateModeRendering] SetElement 0 1
+[$pvDisp(vtkTemp1701) GetProperty InterpolateScalarsBeforeMapping] SetElement 0 1
+[$pvDisp(vtkTemp1701) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1701) GetProperty ScalarVisibility] SetElement 0 1
+[$pvDisp(vtkTemp1701) GetProperty UseLookupTableScalarRange] SetElement 0 1
+[$pvDisp(vtkTemp1701) GetProperty Orientation] SetElement 0 0
+[$pvDisp(vtkTemp1701) GetProperty Orientation] SetElement 1 0
+[$pvDisp(vtkTemp1701) GetProperty Orientation] SetElement 2 0
+[$pvDisp(vtkTemp1701) GetProperty Origin] SetElement 0 0
+[$pvDisp(vtkTemp1701) GetProperty Origin] SetElement 1 0
+[$pvDisp(vtkTemp1701) GetProperty Origin] SetElement 2 0
+[$pvDisp(vtkTemp1701) GetProperty Position] SetElement 0 0
+[$pvDisp(vtkTemp1701) GetProperty Position] SetElement 1 0
+[$pvDisp(vtkTemp1701) GetProperty Position] SetElement 2 0
+[$pvDisp(vtkTemp1701) GetProperty Scale] SetElement 0 1
+[$pvDisp(vtkTemp1701) GetProperty Scale] SetElement 1 1
+[$pvDisp(vtkTemp1701) GetProperty Scale] SetElement 2 1
+[$pvDisp(vtkTemp1701) GetProperty Color] SetElement 0 0.266667
+[$pvDisp(vtkTemp1701) GetProperty Color] SetElement 1 0.266667
+[$pvDisp(vtkTemp1701) GetProperty Color] SetElement 2 0.266667
+[$pvDisp(vtkTemp1701) GetProperty Interpolation] SetElement 0 1
+[$pvDisp(vtkTemp1701) GetProperty LineWidth] SetElement 0 1
+[$pvDisp(vtkTemp1701) GetProperty Opacity] SetElement 0 1
+[$pvDisp(vtkTemp1701) GetProperty PointSize] SetElement 0 1
+[$pvDisp(vtkTemp1701) GetProperty Specular] SetElement 0 0
+[$pvDisp(vtkTemp1701) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1701) GetProperty SelectScalarArray] SetElement 0 {}
+[$pvDisp(vtkTemp1701) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1701) GetProperty SelectScalarArray] SetElement 0 {}
+[$pvDisp(vtkTemp1701) GetProperty ScalarOpacityUnitDistance] SetElement 0 1
+[$pvDisp(vtkTemp1701) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp1701) GetProperty SelectScalarArray] SetElement 0 {}
+$pvDisp(vtkTemp1701) UpdateVTKObjects
+[$kw(vtkTemp1701) GetPVOutput] ColorByArray {Partitions} 3
+$kw(vtkTemp2) SetCurrentPVSourceCallback $kw(vtkTemp1139)
+set kw(vtkTemp2223) [$kw(vtkTemp2) CreatePVSource Clip]
+$kw(vtkTemp2223) SetLabel {Clip10}
+$kw(vtkTemp2224) SetCurrentValue $kw(vtkTemp1139)
+$kw(vtkTemp2325) SetCurrentValue {Plane}
+$kw(vtkTemp2235) SetVisibility 1
+$kw(vtkTemp2235) SetCenter -0.43843 -0.2127 0.32529
+$kw(vtkTemp2235) SetNormal -1 0 0
+$kw(vtkTemp2326) SetSelectedState 0
+$kw(vtkTemp2223) AcceptCallback
+# Saving state of the Display Proxy associated with the source
+set pvDisp(vtkTemp2223) [$kw(vtkTemp2223) GetDisplayProxy] 
+[$pvDisp(vtkTemp2223) GetProperty LODResolution] SetElement 0 50
+[$pvDisp(vtkTemp2223) GetProperty Representation] SetElement 0 2
+[$pvDisp(vtkTemp2223) GetProperty Visibility] SetElement 0 1
+[$pvDisp(vtkTemp2223) GetProperty ColorSpace] SetElement 0 0
+[$pvDisp(vtkTemp2223) GetProperty HSVWrap] SetElement 0 0
+[$pvDisp(vtkTemp2223) GetProperty UseStrips] SetElement 0 0
+[$pvDisp(vtkTemp2223) GetProperty ColorArray] SetElement 0 {Partitions}
+[$pvDisp(vtkTemp2223) GetProperty ColorMode] SetElement 0 0
+[$pvDisp(vtkTemp2223) GetProperty ImmediateModeRendering] SetElement 0 1
+[$pvDisp(vtkTemp2223) GetProperty InterpolateScalarsBeforeMapping] SetElement 0 1
+[$pvDisp(vtkTemp2223) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp2223) GetProperty ScalarVisibility] SetElement 0 1
+[$pvDisp(vtkTemp2223) GetProperty UseLookupTableScalarRange] SetElement 0 1
+[$pvDisp(vtkTemp2223) GetProperty Orientation] SetElement 0 0
+[$pvDisp(vtkTemp2223) GetProperty Orientation] SetElement 1 0
+[$pvDisp(vtkTemp2223) GetProperty Orientation] SetElement 2 0
+[$pvDisp(vtkTemp2223) GetProperty Origin] SetElement 0 0
+[$pvDisp(vtkTemp2223) GetProperty Origin] SetElement 1 0
+[$pvDisp(vtkTemp2223) GetProperty Origin] SetElement 2 0
+[$pvDisp(vtkTemp2223) GetProperty Position] SetElement 0 0
+[$pvDisp(vtkTemp2223) GetProperty Position] SetElement 1 0
+[$pvDisp(vtkTemp2223) GetProperty Position] SetElement 2 0
+[$pvDisp(vtkTemp2223) GetProperty Scale] SetElement 0 1
+[$pvDisp(vtkTemp2223) GetProperty Scale] SetElement 1 1
+[$pvDisp(vtkTemp2223) GetProperty Scale] SetElement 2 1
+[$pvDisp(vtkTemp2223) GetProperty Color] SetElement 0 0.266667
+[$pvDisp(vtkTemp2223) GetProperty Color] SetElement 1 0.266667
+[$pvDisp(vtkTemp2223) GetProperty Color] SetElement 2 0.266667
+[$pvDisp(vtkTemp2223) GetProperty Interpolation] SetElement 0 1
+[$pvDisp(vtkTemp2223) GetProperty LineWidth] SetElement 0 1
+[$pvDisp(vtkTemp2223) GetProperty Opacity] SetElement 0 1
+[$pvDisp(vtkTemp2223) GetProperty PointSize] SetElement 0 1
+[$pvDisp(vtkTemp2223) GetProperty Specular] SetElement 0 0
+[$pvDisp(vtkTemp2223) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp2223) GetProperty SelectScalarArray] SetElement 0 {}
+[$pvDisp(vtkTemp2223) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp2223) GetProperty SelectScalarArray] SetElement 0 {}
+[$pvDisp(vtkTemp2223) GetProperty ScalarOpacityUnitDistance] SetElement 0 1
+[$pvDisp(vtkTemp2223) GetProperty ScalarMode] SetElement 0 3
+[$pvDisp(vtkTemp2223) GetProperty SelectScalarArray] SetElement 0 {}
+$pvDisp(vtkTemp2223) UpdateVTKObjects
+[$kw(vtkTemp2223) GetPVOutput] ColorByArray {Partitions} 3
+$kw(vtkTemp1004) SetVisibility 1
+$kw(vtkTemp1139) SetVisibility 0
+$kw(vtkTemp1527) SetVisibility 1
+$kw(vtkTemp1701) SetVisibility 1
+$kw(vtkTemp2223) SetVisibility 1
+set kw(vtkTemp1015) [$kw(vtkTemp2) GetPVColorMap {C/F} 1]
+$kw(vtkTemp1015) SetScalarBarTitle {C/F}
+$kw(vtkTemp1015) SetScalarBarVectorTitle {Magnitude}
+$kw(vtkTemp1015) SetScalarBarLabelFormat {%-#6.3g}
+$kw(vtkTemp1015) SetStartHSV 0.6667 1 1
+$kw(vtkTemp1015) SetEndHSV 0 1 1
+$kw(vtkTemp1015) SetNumberOfColors 256
+$kw(vtkTemp1015) SetScalarRange 0 1
+$kw(vtkTemp1015) SetScalarRangeLock 0
+$kw(vtkTemp1015) SetScalarBarVisibility 0
+$kw(vtkTemp1015) SetScalarBarPosition1 0.87 0.25
+$kw(vtkTemp1015) SetScalarBarPosition2 0.13 0.5
+$kw(vtkTemp1015) SetScalarBarOrientation 1
+set kw(vtkTemp1225) [$kw(vtkTemp2) GetPVColorMap {CR_Rates} 1]
+$kw(vtkTemp1225) SetScalarBarTitle {CR_Rates}
+$kw(vtkTemp1225) SetScalarBarVectorTitle {Magnitude}
+$kw(vtkTemp1225) SetScalarBarLabelFormat {%-#6.3g}
+$kw(vtkTemp1225) SetStartHSV 0.6667 1 1
+$kw(vtkTemp1225) SetEndHSV 0 1 1
+$kw(vtkTemp1225) SetNumberOfColors 256
+$kw(vtkTemp1225) SetScalarRange -65.4241 60.0147
+$kw(vtkTemp1225) SetScalarRangeLock 0
+$kw(vtkTemp1225) SetScalarBarVisibility 0
+$kw(vtkTemp1225) SetScalarBarPosition1 0.87 0.25
+$kw(vtkTemp1225) SetScalarBarPosition2 0.13 0.5
+$kw(vtkTemp1225) SetScalarBarOrientation 1
+set kw(vtkTemp1465) [$kw(vtkTemp2) GetPVColorMap {Partitions} 1]
+$kw(vtkTemp1465) SetScalarBarTitle {Partitions}
+$kw(vtkTemp1465) SetScalarBarVectorTitle {Magnitude}
+$kw(vtkTemp1465) SetScalarBarLabelFormat {%-#6.3g}
+$kw(vtkTemp1465) SetStartHSV 0.6667 1 1
+$kw(vtkTemp1465) SetEndHSV 0 1 1
+$kw(vtkTemp1465) SetNumberOfColors 256
+$kw(vtkTemp1465) SetScalarRange 0 9
+$kw(vtkTemp1465) SetScalarRangeLock 0
+$kw(vtkTemp1465) SetScalarBarVisibility 0
+$kw(vtkTemp1465) SetScalarBarPosition1 0.87 0.25
+$kw(vtkTemp1465) SetScalarBarPosition2 0.13 0.5
+$kw(vtkTemp1465) SetScalarBarOrientation 1
+$kw(vtkTemp76) SetRendererBackgroundColor 0 0 0
+$kw(vtkTemp76) ParallelProjectionOff
+$kw(vtkTemp76) SetCameraState -2.26556 1.8888 -1.13562 -0.375552 0.255541 -0.100937 0.299153 -0.239043 -0.923778
+$kw(vtkTemp76) SetUseTriangleStrips 0
+$kw(vtkTemp76) SetUseImmediateMode 1
+set kw(vtkTemp414) [$kw(vtkTemp76) GetRenderModuleUI]
+catch {$kw(vtkTemp414) SetLODThreshold 5}
+catch {$kw(vtkTemp414) SetLODResolution 50}
+catch {$kw(vtkTemp414) SetOutlineThreshold 5e+06}
+catch {$kw(vtkTemp414) SetRenderInterruptsEnabled 1}
+set kw(vtkTemp359) [$kw(vtkTemp76) GetCornerAnnotation]
+$kw(vtkTemp359) SetVisibility 0
+$kw(vtkTemp359) SetCornerText {} 0
+$kw(vtkTemp359) SetCornerText {} 1
+$kw(vtkTemp359) SetCornerText {} 2
+$kw(vtkTemp359) SetCornerText {} 3
+$kw(vtkTemp359) SetMaximumLineHeight 0.07
+set kw(vtkTemp380) [$kw(vtkTemp359) GetTextPropertyWidget]
+$kw(vtkTemp380) SetColor 1 1 1
+$kw(vtkTemp380) SetFontFamily 0
+$kw(vtkTemp380) SetBold 0
+$kw(vtkTemp380) SetItalic 0
+$kw(vtkTemp380) SetShadow 0
+$kw(vtkTemp380) SetOpacity 1
+$kw(vtkTemp76) SetOrientationAxesVisibility 0
+$kw(vtkTemp76) SetOrientationAxesInteractivity 0
+$kw(vtkTemp76) SetOrientationAxesOutlineColor 1 1 1
+$kw(vtkTemp76) SetOrientationAxesTextColor 1 1 1
+set kw(vtkTemp789) [$kw(vtkTemp76) GetManipulatorControl2D]
+$kw(vtkTemp789) SetCurrentManipulator 0 1 {Roll}
+$kw(vtkTemp789) SetCurrentManipulator 0 0 {Pan}
+$kw(vtkTemp789) SetCurrentManipulator 1 0 {Pan}
+$kw(vtkTemp789) SetCurrentManipulator 1 1 {Pan}
+$kw(vtkTemp789) SetCurrentManipulator 2 1 {Pan}
+$kw(vtkTemp789) SetCurrentManipulator 0 2 {Pan}
+$kw(vtkTemp789) SetCurrentManipulator 1 2 {Pan}
+$kw(vtkTemp789) SetCurrentManipulator 2 2 {Pan}
+$kw(vtkTemp789) SetCurrentManipulator 2 0 {Zoom}
+set kw(vtkTemp788) [$kw(vtkTemp76) GetManipulatorControl3D]
+$kw(vtkTemp788) SetCurrentManipulator 0 2 {FlyIn}
+$kw(vtkTemp788) SetCurrentManipulator 2 2 {FlyOut}
+$kw(vtkTemp788) SetCurrentManipulator 0 0 {Rotate}
+$kw(vtkTemp788) SetCurrentManipulator 1 1 {Rotate}
+$kw(vtkTemp788) SetCurrentManipulator 1 2 {Rotate}
+$kw(vtkTemp788) SetCurrentManipulator 0 1 {Roll}
+$kw(vtkTemp788) SetCurrentManipulator 1 0 {Pan}
+$kw(vtkTemp788) SetCurrentManipulator 2 1 {Pan}
+$kw(vtkTemp788) SetCurrentManipulator 2 0 {Zoom}
+set kw(vtkTemp661) [$kw(vtkTemp1003) GetAnimationScene]
+set kw(vtkTemp646) [$kw(vtkTemp1003) GetVAnimationInterface]
+set kw(vtkTemp620) [$kw(vtkTemp1003) GetHAnimationInterface]
+
+set kw(vtkTemp623) [$kw(vtkTemp620) GetParentTree]
+$kw(vtkTemp623) SetExpanded 1
+set kw(vtkTemp690) [$kw(vtkTemp623) GetChild "_dont_validate_.ActiveCamera"]
+$kw(vtkTemp690) SetExpanded 0
+set kw(vtkTemp693) [$kw(vtkTemp690) GetChild "Camera.-1"]
+$kw(vtkTemp693) RemoveAllKeyFrames
+set kw(vtkTemp1078) [$kw(vtkTemp623) GetChild "Sources.[$kw(vtkTemp1004) GetName]"]
+$kw(vtkTemp1078) SetExpanded 0
+set kw(vtkTemp1080) [$kw(vtkTemp1078) GetChild "FileName.0"]
+$kw(vtkTemp1080) RemoveAllKeyFrames
+
+set tempid [$kw(vtkTemp1080) CreateAndAddKeyFrame 0 0]
+set kw(vtkTemp2399) [$kw(vtkTemp1080) GetKeyFrame $tempid ]
+#State of a Key Frame 
+$kw(vtkTemp2399) SetKeyTime 0
+$kw(vtkTemp2399) SetKeyValue 0 0
+
+set tempid [$kw(vtkTemp1080) CreateAndAddKeyFrame 1 0]
+set kw(vtkTemp2407) [$kw(vtkTemp1080) GetKeyFrame $tempid ]
+#State of a Key Frame 
+$kw(vtkTemp2407) SetKeyTime 1
+$kw(vtkTemp2407) SetKeyValue 0 7
+set kw(vtkTemp1082) [$kw(vtkTemp1078) GetChild "Sources.[$kw(vtkTemp1004) GetName].Display"]
+$kw(vtkTemp1082) SetExpanded 0
+set kw(vtkTemp1084) [$kw(vtkTemp1082) GetChild "Representation.0"]
+$kw(vtkTemp1084) RemoveAllKeyFrames
+set kw(vtkTemp1086) [$kw(vtkTemp1082) GetChild "Visibility.0"]
+$kw(vtkTemp1086) RemoveAllKeyFrames
+set kw(vtkTemp1088) [$kw(vtkTemp1082) GetChild "Orientation"]
+$kw(vtkTemp1088) SetExpanded 0
+set kw(vtkTemp1090) [$kw(vtkTemp1088) GetChild "Orientation.0"]
+$kw(vtkTemp1090) RemoveAllKeyFrames
+set kw(vtkTemp1092) [$kw(vtkTemp1088) GetChild "Orientation.1"]
+$kw(vtkTemp1092) RemoveAllKeyFrames
+set kw(vtkTemp1094) [$kw(vtkTemp1088) GetChild "Orientation.2"]
+$kw(vtkTemp1094) RemoveAllKeyFrames
+set kw(vtkTemp1096) [$kw(vtkTemp1082) GetChild "Opacity.0"]
+$kw(vtkTemp1096) RemoveAllKeyFrames
+set kw(vtkTemp1170) [$kw(vtkTemp623) GetChild "Sources.[$kw(vtkTemp1139) GetName]"]
+$kw(vtkTemp1170) SetExpanded 0
+set kw(vtkTemp1172) [$kw(vtkTemp1170) GetChild "MaximumNumberOfPoints.0"]
+$kw(vtkTemp1172) RemoveAllKeyFrames
+set kw(vtkTemp1174) [$kw(vtkTemp1170) GetChild "RandomMode.0"]
+$kw(vtkTemp1174) RemoveAllKeyFrames
+set kw(vtkTemp1176) [$kw(vtkTemp1170) GetChild "SetOrient.0"]
+$kw(vtkTemp1176) RemoveAllKeyFrames
+set kw(vtkTemp1178) [$kw(vtkTemp1170) GetChild "SetScaleFactor.0"]
+$kw(vtkTemp1178) RemoveAllKeyFrames
+set kw(vtkTemp1180) [$kw(vtkTemp1170) GetChild "SetScaleMode.0"]
+$kw(vtkTemp1180) RemoveAllKeyFrames
+set kw(vtkTemp1182) [$kw(vtkTemp1170) GetChild "UseMaskPoints.0"]
+$kw(vtkTemp1182) RemoveAllKeyFrames
+set kw(vtkTemp1184) [$kw(vtkTemp1170) GetChild "Sources.[$kw(vtkTemp1139) GetName].Display"]
+$kw(vtkTemp1184) SetExpanded 0
+set kw(vtkTemp1186) [$kw(vtkTemp1184) GetChild "Representation.0"]
+$kw(vtkTemp1186) RemoveAllKeyFrames
+set kw(vtkTemp1188) [$kw(vtkTemp1184) GetChild "Visibility.0"]
+$kw(vtkTemp1188) RemoveAllKeyFrames
+set kw(vtkTemp1190) [$kw(vtkTemp1184) GetChild "Orientation"]
+$kw(vtkTemp1190) SetExpanded 0
+set kw(vtkTemp1192) [$kw(vtkTemp1190) GetChild "Orientation.0"]
+$kw(vtkTemp1192) RemoveAllKeyFrames
+set kw(vtkTemp1194) [$kw(vtkTemp1190) GetChild "Orientation.1"]
+$kw(vtkTemp1194) RemoveAllKeyFrames
+set kw(vtkTemp1196) [$kw(vtkTemp1190) GetChild "Orientation.2"]
+$kw(vtkTemp1196) RemoveAllKeyFrames
+set kw(vtkTemp1198) [$kw(vtkTemp1184) GetChild "Opacity.0"]
+$kw(vtkTemp1198) RemoveAllKeyFrames
+set kw(vtkTemp1634) [$kw(vtkTemp623) GetChild "Sources.[$kw(vtkTemp1527) GetName]"]
+$kw(vtkTemp1634) SetExpanded 0
+set kw(vtkTemp1636) [$kw(vtkTemp1634) GetChild "InsideOut.0"]
+$kw(vtkTemp1636) RemoveAllKeyFrames
+set kw(vtkTemp1638) [$kw(vtkTemp1634) GetChild "Value.0"]
+$kw(vtkTemp1638) RemoveAllKeyFrames
+set kw(vtkTemp1640) [$kw(vtkTemp1634) GetChild "Sources.[$kw(vtkTemp1527) GetName].Plane"]
+$kw(vtkTemp1640) SetExpanded 0
+set kw(vtkTemp1642) [$kw(vtkTemp1640) GetChild "Normal"]
+$kw(vtkTemp1642) SetExpanded 0
+set kw(vtkTemp1644) [$kw(vtkTemp1642) GetChild "Normal.0"]
+$kw(vtkTemp1644) RemoveAllKeyFrames
+set kw(vtkTemp1646) [$kw(vtkTemp1642) GetChild "Normal.1"]
+$kw(vtkTemp1646) RemoveAllKeyFrames
+set kw(vtkTemp1648) [$kw(vtkTemp1642) GetChild "Normal.2"]
+$kw(vtkTemp1648) RemoveAllKeyFrames
+set kw(vtkTemp1650) [$kw(vtkTemp1640) GetChild "Offset.0"]
+$kw(vtkTemp1650) RemoveAllKeyFrames
+set kw(vtkTemp1652) [$kw(vtkTemp1640) GetChild "Origin"]
+$kw(vtkTemp1652) SetExpanded 0
+set kw(vtkTemp1654) [$kw(vtkTemp1652) GetChild "Origin.0"]
+$kw(vtkTemp1654) RemoveAllKeyFrames
+set kw(vtkTemp1656) [$kw(vtkTemp1652) GetChild "Origin.1"]
+$kw(vtkTemp1656) RemoveAllKeyFrames
+set kw(vtkTemp1658) [$kw(vtkTemp1652) GetChild "Origin.2"]
+$kw(vtkTemp1658) RemoveAllKeyFrames
+set kw(vtkTemp1660) [$kw(vtkTemp1634) GetChild "Sources.[$kw(vtkTemp1527) GetName].Display"]
+$kw(vtkTemp1660) SetExpanded 0
+set kw(vtkTemp1662) [$kw(vtkTemp1660) GetChild "Representation.0"]
+$kw(vtkTemp1662) RemoveAllKeyFrames
+set kw(vtkTemp1664) [$kw(vtkTemp1660) GetChild "Visibility.0"]
+$kw(vtkTemp1664) RemoveAllKeyFrames
+set kw(vtkTemp1666) [$kw(vtkTemp1660) GetChild "Orientation"]
+$kw(vtkTemp1666) SetExpanded 0
+set kw(vtkTemp1668) [$kw(vtkTemp1666) GetChild "Orientation.0"]
+$kw(vtkTemp1668) RemoveAllKeyFrames
+set kw(vtkTemp1670) [$kw(vtkTemp1666) GetChild "Orientation.1"]
+$kw(vtkTemp1670) RemoveAllKeyFrames
+set kw(vtkTemp1672) [$kw(vtkTemp1666) GetChild "Orientation.2"]
+$kw(vtkTemp1672) RemoveAllKeyFrames
+set kw(vtkTemp1674) [$kw(vtkTemp1660) GetChild "Opacity.0"]
+$kw(vtkTemp1674) RemoveAllKeyFrames
+set kw(vtkTemp1808) [$kw(vtkTemp623) GetChild "Sources.[$kw(vtkTemp1701) GetName]"]
+$kw(vtkTemp1808) SetExpanded 0
+set kw(vtkTemp1810) [$kw(vtkTemp1808) GetChild "InsideOut.0"]
+$kw(vtkTemp1810) RemoveAllKeyFrames
+set kw(vtkTemp1812) [$kw(vtkTemp1808) GetChild "Value.0"]
+$kw(vtkTemp1812) RemoveAllKeyFrames
+set kw(vtkTemp1814) [$kw(vtkTemp1808) GetChild "Sources.[$kw(vtkTemp1701) GetName].Plane"]
+$kw(vtkTemp1814) SetExpanded 0
+set kw(vtkTemp1816) [$kw(vtkTemp1814) GetChild "Normal"]
+$kw(vtkTemp1816) SetExpanded 0
+set kw(vtkTemp1818) [$kw(vtkTemp1816) GetChild "Normal.0"]
+$kw(vtkTemp1818) RemoveAllKeyFrames
+set kw(vtkTemp1820) [$kw(vtkTemp1816) GetChild "Normal.1"]
+$kw(vtkTemp1820) RemoveAllKeyFrames
+set kw(vtkTemp1822) [$kw(vtkTemp1816) GetChild "Normal.2"]
+$kw(vtkTemp1822) RemoveAllKeyFrames
+set kw(vtkTemp1824) [$kw(vtkTemp1814) GetChild "Offset.0"]
+$kw(vtkTemp1824) RemoveAllKeyFrames
+set kw(vtkTemp1826) [$kw(vtkTemp1814) GetChild "Origin"]
+$kw(vtkTemp1826) SetExpanded 0
+set kw(vtkTemp1828) [$kw(vtkTemp1826) GetChild "Origin.0"]
+$kw(vtkTemp1828) RemoveAllKeyFrames
+set kw(vtkTemp1830) [$kw(vtkTemp1826) GetChild "Origin.1"]
+$kw(vtkTemp1830) RemoveAllKeyFrames
+set kw(vtkTemp1832) [$kw(vtkTemp1826) GetChild "Origin.2"]
+$kw(vtkTemp1832) RemoveAllKeyFrames
+set kw(vtkTemp1834) [$kw(vtkTemp1808) GetChild "Sources.[$kw(vtkTemp1701) GetName].Display"]
+$kw(vtkTemp1834) SetExpanded 0
+set kw(vtkTemp1836) [$kw(vtkTemp1834) GetChild "Representation.0"]
+$kw(vtkTemp1836) RemoveAllKeyFrames
+set kw(vtkTemp1838) [$kw(vtkTemp1834) GetChild "Visibility.0"]
+$kw(vtkTemp1838) RemoveAllKeyFrames
+set kw(vtkTemp1840) [$kw(vtkTemp1834) GetChild "Orientation"]
+$kw(vtkTemp1840) SetExpanded 0
+set kw(vtkTemp1842) [$kw(vtkTemp1840) GetChild "Orientation.0"]
+$kw(vtkTemp1842) RemoveAllKeyFrames
+set kw(vtkTemp1844) [$kw(vtkTemp1840) GetChild "Orientation.1"]
+$kw(vtkTemp1844) RemoveAllKeyFrames
+set kw(vtkTemp1846) [$kw(vtkTemp1840) GetChild "Orientation.2"]
+$kw(vtkTemp1846) RemoveAllKeyFrames
+set kw(vtkTemp1848) [$kw(vtkTemp1834) GetChild "Opacity.0"]
+$kw(vtkTemp1848) RemoveAllKeyFrames
+set kw(vtkTemp2330) [$kw(vtkTemp623) GetChild "Sources.[$kw(vtkTemp2223) GetName]"]
+$kw(vtkTemp2330) SetExpanded 0
+set kw(vtkTemp2332) [$kw(vtkTemp2330) GetChild "InsideOut.0"]
+$kw(vtkTemp2332) RemoveAllKeyFrames
+set kw(vtkTemp2334) [$kw(vtkTemp2330) GetChild "Value.0"]
+$kw(vtkTemp2334) RemoveAllKeyFrames
+set kw(vtkTemp2336) [$kw(vtkTemp2330) GetChild "Sources.[$kw(vtkTemp2223) GetName].Plane"]
+$kw(vtkTemp2336) SetExpanded 0
+set kw(vtkTemp2338) [$kw(vtkTemp2336) GetChild "Normal"]
+$kw(vtkTemp2338) SetExpanded 0
+set kw(vtkTemp2340) [$kw(vtkTemp2338) GetChild "Normal.0"]
+$kw(vtkTemp2340) RemoveAllKeyFrames
+set kw(vtkTemp2342) [$kw(vtkTemp2338) GetChild "Normal.1"]
+$kw(vtkTemp2342) RemoveAllKeyFrames
+set kw(vtkTemp2344) [$kw(vtkTemp2338) GetChild "Normal.2"]
+$kw(vtkTemp2344) RemoveAllKeyFrames
+set kw(vtkTemp2346) [$kw(vtkTemp2336) GetChild "Offset.0"]
+$kw(vtkTemp2346) RemoveAllKeyFrames
+set kw(vtkTemp2348) [$kw(vtkTemp2336) GetChild "Origin"]
+$kw(vtkTemp2348) SetExpanded 0
+set kw(vtkTemp2350) [$kw(vtkTemp2348) GetChild "Origin.0"]
+$kw(vtkTemp2350) RemoveAllKeyFrames
+set kw(vtkTemp2352) [$kw(vtkTemp2348) GetChild "Origin.1"]
+$kw(vtkTemp2352) RemoveAllKeyFrames
+set kw(vtkTemp2354) [$kw(vtkTemp2348) GetChild "Origin.2"]
+$kw(vtkTemp2354) RemoveAllKeyFrames
+set kw(vtkTemp2356) [$kw(vtkTemp2330) GetChild "Sources.[$kw(vtkTemp2223) GetName].Display"]
+$kw(vtkTemp2356) SetExpanded 0
+set kw(vtkTemp2358) [$kw(vtkTemp2356) GetChild "Representation.0"]
+$kw(vtkTemp2358) RemoveAllKeyFrames
+set kw(vtkTemp2360) [$kw(vtkTemp2356) GetChild "Visibility.0"]
+$kw(vtkTemp2360) RemoveAllKeyFrames
+set kw(vtkTemp2362) [$kw(vtkTemp2356) GetChild "Orientation"]
+$kw(vtkTemp2362) SetExpanded 0
+set kw(vtkTemp2364) [$kw(vtkTemp2362) GetChild "Orientation.0"]
+$kw(vtkTemp2364) RemoveAllKeyFrames
+set kw(vtkTemp2366) [$kw(vtkTemp2362) GetChild "Orientation.1"]
+$kw(vtkTemp2366) RemoveAllKeyFrames
+set kw(vtkTemp2368) [$kw(vtkTemp2362) GetChild "Orientation.2"]
+$kw(vtkTemp2368) RemoveAllKeyFrames
+set kw(vtkTemp2370) [$kw(vtkTemp2356) GetChild "Opacity.0"]
+$kw(vtkTemp2370) RemoveAllKeyFrames
+
+# State for vtkPVAnimationScene
+$kw(vtkTemp661) SetDuration 8
+$kw(vtkTemp661) SetPlayMode 0
+$kw(vtkTemp661) SetFrameRate 1
+$kw(vtkTemp661) SetLoop 0
+$kw(vtkTemp661) SetAnimationTime 0
+$kw(vtkTemp2) SetCenterOfRotation 0.0001616 -0.00011213 0
+
+# Comparative visualizations
+set kw(vtkTemp2413) [$kw(vtkTemp2) GetComparativeVisManagerGUI]
+set kw(vtkTemp2440) [$kw(vtkTemp2413) GetManager]
+
+vtkSMObject foo
+set proxyManager [foo GetProxyManager]
+foo Delete
+
+$kw(vtkTemp2413) Update
