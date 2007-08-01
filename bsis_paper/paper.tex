@@ -7,7 +7,7 @@
 % use the graphics package for simple commands
 % \usepackage{graphics}
 % or use the graphicx package for more complicated commands
-\usepackage[draft]{graphicx}
+\usepackage{graphicx}
 % or use the epsfig package if you prefer to use the old commands
 % \usepackage{epsfig}
 
@@ -554,7 +554,7 @@ $bucket[bucketID - numColors].\textsc{Insert}(i)$
 \begin{figure}
   \begin{center}
     %\includegraphics[width=0.8\textwidth]{images/bucket-algorithm}
-    \includegraphics[width=0.98\textwidth]{images/initial}
+    \includegraphics[width=0.98\textwidth]{images/BSIS/initial}
     \caption{The BSIS data structure.}
     \label{5:fig:bucket-algorithm}
   \end{center}
@@ -568,7 +568,7 @@ structure and other affected vertices are moved to new locations in
 the data structure. Such vertices are highlighted in red.
 \begin{figure}
   \begin{center}
-    \includegraphics[width=0.98\textwidth]{images/cp1}
+    \includegraphics[width=0.98\textwidth]{images/BSIS/cp1}
     \caption{The BSIS data structure after selecting the first
     $C$-point (Vertex 10). The weights of neighbors of the new
     $C$-point are updated. Some neighbors become $F$-points and are
@@ -631,7 +631,7 @@ Figure~\ref{5:fig:cp1-agg} depicts the data structure after the first
 set of $C$-points is selected.
 \begin{figure}
   \begin{center}
-    \includegraphics[width=0.98\textwidth]{images/cp1-agg}
+    \includegraphics[width=0.98\textwidth]{images/BSIS/cp1-agg}
     \caption{The BSIS data structure after selecting the first
     $C$-point (Vertex 10) with aggregate weight updates.}
     \label{5:fig:cp1-agg}
@@ -722,7 +722,7 @@ first iteration of the painted boundary method with weight update
 aggregation. The data structure shown is for the left domain.
 \begin{figure}
   \begin{center}
-    \includegraphics[width=0.98\textwidth]{images/cp1p}
+    \includegraphics[width=0.98\textwidth]{images/BSIS/cp1p}
     \caption{The painted boundary method with aggregate weight
     updates following one iteration. The data structure is for the
     left domain. Painted vertices are marked with a green ring in the
@@ -738,7 +738,7 @@ is already painted. Therefore, on-processor neighbors of Vertex~22 are
 also painted (see Figure~\ref{5:fig:cp2-parallel}).
 \begin{figure}
   \begin{center}
-    \includegraphics[width=0.98\textwidth]{images/cp2p}
+    \includegraphics[width=0.98\textwidth]{images/BSIS/cp2p}
     \caption{The painted boundary method with aggregate weight
     updates following the second iteration. In this iteration a
     painted vertex was selected, leading to the painting of its
@@ -779,5 +779,8 @@ doing more of the same work, but by avoiding communication. The second
 and third ideas are similar in nature and both involve using dynamic
 load balancing techniques~\cite{DevineBomanKarypisPP04, CybDLB,
 deCoughnyLB, SchloegelLB, ZoltanParHyp06ipdps, ZoltanParHypRepart07}.
+
+\bibliographystyle{plain}
+\bibliography{paper}
 
 \end{document}
