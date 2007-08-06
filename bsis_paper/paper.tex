@@ -52,14 +52,15 @@
 % use the ead command for the email address,
 % and the form \ead[url] for the home page:
 \title{Bucket-Sorted Independent Sets for Algebraic Multigrid}
-\author{David Alber\corauthref{cor}},
-\corauth[cor]{Corresponding author. Address: 201 N. Goodwin Ave., Siebel
-Center for Computer Science, Urbana, IL 61801}
-\ead{dalber@uiuc.edu}
-\ead[url]{http://www.cs.uiuc.edu/homes/dalber}
-\author{Luke Olson}
-\address{Department of Computer Science\\ University of Illinois at Urbana-Champaign}
-\ead{dalber@uiuc.edu}
+\author[NREL]{David Alber\corauthref{cor}},
+\corauth[cor]{Corresponding author. Address: 1617 Cole Blvd., Mail
+  Stop: 1608, Golden, CO 80401}
+\ead{david\_alber@nrel.gov}
+%\ead[url]{http://www.cs.uiuc.edu/homes/dalber}
+\author[UIUC]{Luke Olson}
+\address[NREL]{Scientific Computing Center\\ National Renewable Energy Laboratory}
+\address[UIUC]{Department of Computer Science\\ University of Illinois at Urbana-Champaign}
+\ead{lukeo@uiuc.edu}
 \ead[url]{http://www.cs.uiuc.edu/homes/lukeo}
 % \thanks[label2]{}
 % \address{Address\thanksref{label3}}
@@ -94,6 +95,18 @@ coarse-grid selection often follows. In this chapter, new theory and
 algorithms to decrease the computational cost associated with the
 search and weight update procedures used in coarse-grid selection are
 presented.
+
+\section{Coarse Grid Selection}
+\label{sec:coarse-grid-select}
+
+\subsection{Problem}
+\label{sec:problem}
+% Outline coarse grid selection. Problem outline.
+
+\subsection{Independent Set-Based Selection}
+\label{sec:indep-set-based}
+% Talk about independent set-based algorithms here, and give general
+% independent set-based algrotihm here.
 
 \section{CLJP-c}
 Recall that CLJP-c colors the graph of $S$ before selecting
@@ -662,7 +675,7 @@ reported. This time includes the cost for all parts of the algorithms,
 including the graph coloring phase. AMG solve phase information is not
 reported since the algorithms produce identical coarse grids and since
 information on solve phase performance for AMG with CLJP-c is
-documented in~\cite{alber-cljpc, alber-PCGS}.
+documented in~\cite{alber-cljpc,alber-PCGS}.
 
 The smallest problem is a $30 \times 30 \times 30$ grid. Subsequent
 problems are grids of size $60^3$, $90^3$, up to $210^3$. The largest
@@ -777,10 +790,10 @@ level, BSIS is still valuable on coarse grids. A third option is to
 replicate the operator matrix on processors, which leads to processors
 doing more of the same work, but by avoiding communication. The second
 and third ideas are similar in nature and both involve using dynamic
-load balancing techniques~\cite{DevineBomanKarypisPP04, CybDLB,
-deCoughnyLB, SchloegelLB, ZoltanParHyp06ipdps, ZoltanParHypRepart07}.
+load balancing
+techniques~\cite{DevineBomanKarypisPP04,CybDLB,deCoughnyLB,SchloegelLB,ZoltanParHyp06ipdps,ZoltanParHypRepart07}.
 
-\bibliographystyle{plain}
+\bibliographystyle{elsart-num}
 \bibliography{paper}
 
 \end{document}
