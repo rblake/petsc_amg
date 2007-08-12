@@ -42,6 +42,8 @@
 \usepackage{caption}
 \captionsetup[lstlisting]{justification=raggedright}
 
+\newcommand{\hp}{H1$^\prime$}
+
 \begin{document}
 \begin{frontmatter}
 
@@ -56,7 +58,7 @@
 \corauth[cor]{Corresponding author. Address: 1617 Cole Blvd., Mail
   Stop: 1608, Golden, CO 80401}
 \ead{david\_alber@nrel.gov}
-%\ead[url]{http://www.cs.uiuc.edu/homes/dalber}
+\ead[url]{http://google.com/ie?q=david+alber+nrel\&num=1}
 \author[UIUC]{Luke Olson}
 \address[NREL]{Scientific Computing Center\\ National Renewable Energy Laboratory}
 \address[UIUC]{Department of Computer Science\\ University of Illinois at Urbana-Champaign}
@@ -70,7 +72,6 @@
 % \address[label2]{}
 
 \begin{abstract}
-% Text of abstract
 \end{abstract}
 
 \begin{keyword}
@@ -83,244 +84,99 @@ multigrid \sep parallel algorithms
 \end{keyword}
 \end{frontmatter}
 
-% main text
-
 \section{Introduction}
-Chapters~\ref{chap:CGS} and~\ref{chap:color-based} demonstrate the
-behavior of independent set-based coarse-grid selection
-algorithms. One common design property among the selection algorithms
-is a routine to search for vertices to become
-$C$-points. Additionally, an update in the weights of vertices as the
-coarse-grid selection often follows. In this chapter, new theory and
-algorithms to decrease the computational cost associated with the
-search and weight update procedures used in coarse-grid selection are
-presented.
+\label{sec:intro}
+The algebraic multigrid (AMG) method~\cite{Ruge1987,Brandt1982} is an
+efficient numerical algorithm for finding the solution to numerous
+problems, including linear systems $Ax = b$ arising from the
+discretization of partial differential equations on structured and
+unstructured meshes. In many cases, the computational complexity of
+AMG is $O(n)$, where $n$ is the number of unknowns in the linear
+system. The linear cost scaling property of AMG makes the method
+attractive, especially for large problems.
 
-\section{Coarse Grid Selection}
-\label{sec:coarse-grid-select}
+AMG algorithms are generally divided into two phases: the setup phase
+and the solve phase. Setup phase algorithms provide functionality for
+constructing elements needed by the solve phase, such as coarse grids,
+operators to transfer information between levels of the problem, and
+the linear systems to be solved on each level. The solve phase applies
+relaxation methods on the problems generated in the setup phase and
+uses the transfer operators to move vectors between levels.
 
-\subsection{Problem}
-\label{sec:problem}
-% Outline coarse grid selection. Problem outline.
+In this paper, we focus attention on coarse-grid selection algorithms
+in the AMG setup phase. One class of coarse-grid selection algorithms,
+independent set-based algorithms, is studied in detail. In
+Section~\ref{sec:cgs}, we introduce the coarse-grid selection problems
+and the goals of coarse-grid selection algorithms. The components of
+independent set-based coarsening algorithms are discussed. 
+
+\section{Coarse-Grid Selection}
+\label{sec:cgs}
+In AMG, coarse-grid selection is the process of selecting the degrees
+of freedom for the coarse level problem. In classical AMG, degrees of
+freedom on a coarse level are a subset of the degrees of freedom on a
+finer level. Smoothed
+aggregation~\cite{Vanek1996,Vanek2001,brezina2005} forms a
+coarse-level degree of freedom by aggregating several fine-level
+degrees of freedom. In this paper, we study coarsening for classical
+AMG.
+
+Given a set of fine-level degrees of freedom, $\Omega_k$, coarse-grid
+selection for classical AMG selects a set of coarse-level degrees of
+freedom $\Omega_{k+1} \subset \Omega_k$. Several approaches have been
+developed for selecting the coarse grid.
+
+Independent set-based algorithms are most numerous and all trace their
+roots to the classical AMG coarsening algorithm, RS
+coarsening~\cite{Ruge1987}. These methods are our focus and are
+discussed in more detail in the next section.
+
+Other methods take substantially different approaches to
+coarsening. The coarsening technique in~\cite{Griebel2006} develops a
+parallel coarsening algorithm that utilizes RS. On each processor, RS
+selects several different coarse grids, and then one coarse grid is
+selected per processor in a way to minimize special treatment on
+processor boundaries. In~\cite{MacLachlan2006}, a greedy approach is
+used to produce a good splitting of the unknowns into fine-grid and
+coarse-grid sets. Subdomain blocking techniques~\cite{Krechel2001}
+offer another approach for parallel coarse-grid selection by
+decoupling coarse grids and alleviating the need for communication on
+coarse levels. Compatible relaxation
+approaches~\cite{Brandt2000,Livne2004,Brannick2005} form coarse grids
+incrementally and decide when the coarse grid is sufficient through a
+quality measure based on relaxation.
 
 \subsection{Independent Set-Based Selection}
 \label{sec:indep-set-based}
-% Talk about independent set-based algorithms here, and give general
-% independent set-based algrotihm here.
+Independent set-based coarse grid selection algorithms rely on
+\emph{strength of connection} measures to ascertain the influence
+between unknowns.
 
-\section{CLJP-c}
-Recall that CLJP-c colors the graph of $S$ before selecting
-$C$-points, and the colors are used as one component of the vertex
-weights. As a result, the structure of the coarse grids selected is
-improved. More formally, the use of graph coloring provides the
-following important result.
-\begin{thm}
-\label{5:theorem:CLJPc-neighbor-independence}
-For all pairs of vertices $i$ and $j \in \mathcal{N}_i$ CLJP-c
-guarantees $w_i \ne w_j$.
-\end{thm}
-\begin{proof}
-Assume two adjacent vertices $i$ and $j$ have the same weight. That is,
-$|S_i^T| = |S_j^T|$ and the weight augmentation provided through
-coloring is the same for $i$ and $j$. The graph of $S$, however, is
-colored such that $i$ and $j$ are different colors for all $j \in
-\mathcal{N}_i$, so a contradiction is reached.
-\end{proof}
-Theorem~\ref{5:theorem:CLJPc-neighbor-independence} establishes that
-all adjacent vertices have different weights in CLJP-c, which is not
-guaranteed in CLJP, although is unlikely to occur. The following
-corollaries are a result of
-Theorem~\ref{5:theorem:CLJPc-neighbor-independence}.
-\begin{cor}
-Any set of vertices in the graph of $S$ that share the same weight is
-an independent set.
-\end{cor}
-\begin{cor}
-\label{5:cor:max-weight-indep-set}
-The set of vertices with the largest weight in the graph of $S$ form
-an independent set satisfying~\ref{5:eqn:D-conditions}. That is, each
-vertex in that independent set has a uniquely maximal weight in its
-neighborhood.
-\end{cor}
-The first corollary states that independent sets can be selected in
-the graph simply by selecting sets of vertices with the same
-weight. Corollary~\ref{5:cor:max-weight-indep-set} refines this
-observation to a subset of vertices guaranteed to satisfy the
-selection criterion. In particular, it shows it is possible to build
-the coarse grid by selecting vertices with the maximum weight,
-updating weights, selecting the next set of vertices with maximum
-weight, and so on. This approach is taken by the algorithm developed
-in Section~\ref{5:sec:contribution}. It is proven in
-Section~\ref{5:sec:cg-invariance} that despite the difference in
-approach, the resulting coarse grid is the same as that selected by
-CLJP-c.
+Many independent set-based coarsening algorithms form $\Omega_{k+1}$
+using the following heuristics.
+\begin{description}
+\item[H1:] For each unknown $j$ that strongly influences $F$-point
+  $i$, $j$ is either a $C$-point or strongly depends on a $C$-point
+  $k$ that also strongly influences $i$.
+\item[H2:] The set of $C$-points needs to form a maximal independent
+  set in the reduced graph of $S$ such that no $C$-point strongly
+  depends on another $C$-point.
+\end{description}
+H1 and H2 cannot, in general, be satisfied simultaneously, so H1 is
+enforced by independent set-based methods, while H2 serves as a
+guideline whose purpose is to encourage selection of small
+$|\Omega_{k+1}|$.
 
-\section{Coarse-Grid Selection Search and Weight Update}
-\label{5:sec:s-and-w-update}
-CLJP and its descendents select an independent set $D$ in each
-iteration. Stated originally in Section~\ref{3:sec:CLJP}, the
-condition for selecting $D$ is that all vertices $i \in D$ must
-satisfy
-\begin{equation}
-\label{5:eqn:D-conditions}
-w_i > w_j\;\textrm{for all } j \in \mathcal{N}_i.
-\end{equation}
-CLJP and CLJP-c rely on a search routine to locate locally maximal
-weights and on a weight update routine to modify weights of vertices
-connected to new $C$-points.
+Some independent set-based coarsening algorithms use a variant of H1,
+called \hp, which is a relaxed version of H1.
+\begin{description}
+\item[\hp] Each $F$-point must be strongly influenced by at least one
+  $C$-point.
+\end{description}
 
-The algorithms for searching and updating vertex weights in CLJP in
-detail are examined in this section. In particular, the impact of
-using a sparse matrix format on the coarsening procedure. The
-pseudo-code below assumes the software uses a compressed sparse row
-(CSR)~\cite{saadBook} matrix format or other similar format, which are
-common matrix formats in numerical software. CSR provides low memory
-costs for storing sparse matrices and provides efficient access to the
-nonzeros in a row. Accessing the nonzeros in a column is an expensive
-operation in this format and strongly influences the weight update
-routine in CLJP-style algorithms because $S$ is, in general, not
-symmetric.
+\section{Invariance of Selection in Independent Set-Based Methods}
+\label{sec:invariance}
 
-The search step in CLJP is implemented as shown in
-Algorithm~\ref{5:alg:search}.
-\begin{lstlisting}[caption={Coarse-Grid Selection Graph Search},label=5:alg:search]
-%\textsc{Search-Graph}$(S,\, C,\, F)$%
-$D \leftarrow \emptyset$
-for $i$ in $(C \cup F)$
-  if $w_i > w_j,\,\forall j \in \mathcal{N}_i$
-    $D \leftarrow D \cup \{i\}$
-  end
-end
-return $D$
-\end{lstlisting}
-% \begin{algorithm}[h]
-% \caption{Coarse-Grid Selection Graph Search}
-% \label{5:alg:search}
-% \textsc{Search-Graph}$(S,\, C,\, F)$ \{
-% \begin{algorithmic}[1]
-% \STATE $D \leftarrow \emptyset$
-% \FORALL{$i \notin (C \cup F)$}
-% \IF{$w_i > w_j,\,\forall j \in \mathcal{N}_i$}
-% \STATE $D \leftarrow D \cup \{i\}$
-% \ENDIF
-% \ENDFOR
-% \RETURN $D$
-% \end{algorithmic}
-% \}
-% \end{algorithm}
-In the first iteration, Line~3 is run $2|E|$ times. The total cost of
-search in constructing the coarse grid depends on the number of
-iterations needed. Even in the best case of $\Omega(E)$ time, the cost
-is significant when the graph contains large numbers of edges, as
-usually happens on the lower levels in the grid hierarchy
-(see~\cite{alber-PCGS} for examples). In the next section, a new
-technique is introduced for conducting the search in coarse-grid
-selection algorithms independent of the number of edges in the graph.
-
-Pseudo-code for the weight update in CLJP is shown in Algorithm~\ref{5:alg:setup}.
-\begin{lstlisting}[caption={CLJP Weight Update for CSR Matrix},label=5:alg:setup]
-%\textsc{Update-Weights}$(S,\, D,\, C,\, F,\, w)$%
-for $d \in D$
-  for $i \in S_d$
-    $w_i \leftarrow w_i - 1$    //see %Figure~\ref{3:fig:CLJP-update-heuristics} left%
-    $S_d = S_d \setminus \{i\}$ //removing edge from graph
-  end
-end
-for $i \notin (C \cup F)$
-  for $k$ originally in $S_i$
-    if $k \in D$
-      mark $k$ NEW-C-POINT
-    end
-  end
-  for $j \in S_i$
-    if $j \notin D$
-      for $k \in S_j$
-        if $k$ is marked NEW-C-POINT      // $i$ and $j$ mutually influenced by $k$
-          $w_j \leftarrow w_j - 1$        // see %Figure~\ref{3:fig:CLJP-update-heuristics} right%
-          $S_i = S_i \setminus \{j\}$     // remove edge from $j$ to $i$
-        end
-      end
-    end
-  end
-  for $k$ originally in $S_i$
-    if $k \in D$
-      unmark $k$
-      $S_i = S_i \setminus \{k\}$         // remove edge from $k$ to $i$, if present
-    end
-  end
-end
-\end{lstlisting}
-%\begin{algorithm}[h]
-%\caption{CLJP Weight Update for CSR Matrix}
-%\label{5:alg:setup}
-%\textsc{Update-Weights}$(S,\, D,\, C,\, F,\, w)$ \{
-%\begin{algorithmic}[1]
-%\FORALL{$d \in D$}
-%\FORALL{$i \in S_d$}
-%\STATE $w_i \leftarrow w_i - 1$ \COMMENT{see
-%  Figure~\ref{3:fig:CLJP-update-heuristics} left}
-%\STATE $S_d = S_d \setminus \{i\}$ \COMMENT{removing edge from graph}
-%\ENDFOR
-%\ENDFOR
-%\FORALL{$i \notin (C \cup F)$}
-%\FORALL{$k$ originally in $S_i$}
-%\IF{$k \in D$}
-%\STATE mark $k$ NEW-C-POINT
-%\ENDIF
-%\ENDFOR
-%\FORALL{$j \in S_i$}
-%\IF{$j \notin D$}
-%\FORALL{$k \in S_j$}
-%\IF[$i$ and $j$ mutually influenced by $k$]{$k$ is marked NEW-C-POINT}
-%\STATE $w_j \leftarrow w_j - 1$ \COMMENT{see
-%  Figure~\ref{3:fig:CLJP-update-heuristics} right}
-%\STATE $S_i = S_i \setminus \{j\}$ \COMMENT{remove edge from $j$ to $i$}
-%\ENDIF
-%\ENDFOR
-%\ENDIF
-%\ENDFOR
-%\FORALL{$k$ originally in $S_i$}
-%\IF{$k \in D$}
-%\STATE unmark $k$
-%\STATE $S_i = S_i \setminus \{k\}$ \COMMENT{remove edge from $k$ to $i$,
-%  if present}
-%\ENDIF
-%\ENDFOR
-%\ENDFOR
-%\end{algorithmic}
-%\}
-%\end{algorithm}
-The level of complication in this update routine is due to the CSR
-format and the need to find vertices strongly influenced by new
-$C$-points. When a new $C$-point $k$ is selected, the first type of
-weight update is trivial since determining the vertices in $S_k$ is
-inexpensive. The second type of update is more expensive since the
-vertices influenced by $k$ are difficult to determine in a CSR
-format. The update requires a search of many vertices $i$ and all of
-their strong influencing neighbors $j$. The routine then searches
-strongly influencing $j$ to determine if any $k \in D$ strongly
-influences both $i$ and $j$. The cost increases dramatically as the
-density of $S$ increases. Large operator complexities have a
-disproportionately large impact on coarse-grid selection run time. In
-the next section, a modified update routine to compliment the new
-search technique is introduced.
-
-\section{Bucket Sorted Independent Set Selection}
-\label{5:sec:contribution}
-In this section, new techniques for searching the graph of $S$ for new
-$C$-points and subsequently updating the weights of remaining vertices
-are developed. The new algorithm is labeled Bucket Sorted Independent
-Sets (BSIS) to reflect the data structure used.
-
-Like CLJP-c, BSIS depends on graph coloring, but utilizes modified
-routines for search and weight update. Furthermore, rather than
-applying the color information to augment vertex weights, BSIS uses
-the colors in a bucket data structure. Once initialized, this data
-structure selects independent sets, which satisfy the conditions in
-(\ref{5:eqn:D-conditions}), in constant time.
-
-\subsection{Coarse Grid Invariance}
-\label{5:sec:cg-invariance}
 Theory is developed in this section to prove coarse-grid selection
 invariance in general independent set-based algorithms. The algorithms
 considered thus far select independent sets using
@@ -490,6 +346,220 @@ algorithms. This information enables the design and implementation of
 new algorithms that yield identical coarse grids using different and
 possibly more efficient techniques.
 
+\section{Bucket Sorted Independent Set Selection}
+\label{5:sec:contribution}
+
+\subsection{CLJP-c}
+Recall that CLJP-c colors the graph of $S$ before selecting
+$C$-points, and the colors are used as one component of the vertex
+weights. As a result, the structure of the coarse grids selected is
+improved. More formally, the use of graph coloring provides the
+following important result.
+\begin{thm}
+\label{5:theorem:CLJPc-neighbor-independence}
+For all pairs of vertices $i$ and $j \in \mathcal{N}_i$ CLJP-c
+guarantees $w_i \ne w_j$.
+\end{thm}
+\begin{proof}
+Assume two adjacent vertices $i$ and $j$ have the same weight. That is,
+$|S_i^T| = |S_j^T|$ and the weight augmentation provided through
+coloring is the same for $i$ and $j$. The graph of $S$, however, is
+colored such that $i$ and $j$ are different colors for all $j \in
+\mathcal{N}_i$, so a contradiction is reached.
+\end{proof}
+Theorem~\ref{5:theorem:CLJPc-neighbor-independence} establishes that
+all adjacent vertices have different weights in CLJP-c, which is not
+guaranteed in CLJP, although is unlikely to occur. The following
+corollaries are a result of
+Theorem~\ref{5:theorem:CLJPc-neighbor-independence}.
+\begin{cor}
+Any set of vertices in the graph of $S$ that share the same weight is
+an independent set.
+\end{cor}
+\begin{cor}
+\label{5:cor:max-weight-indep-set}
+The set of vertices with the largest weight in the graph of $S$ form
+an independent set satisfying~\ref{5:eqn:D-conditions}. That is, each
+vertex in that independent set has a uniquely maximal weight in its
+neighborhood.
+\end{cor}
+The first corollary states that independent sets can be selected in
+the graph simply by selecting sets of vertices with the same
+weight. Corollary~\ref{5:cor:max-weight-indep-set} refines this
+observation to a subset of vertices guaranteed to satisfy the
+selection criterion. In particular, it shows it is possible to build
+the coarse grid by selecting vertices with the maximum weight,
+updating weights, selecting the next set of vertices with maximum
+weight, and so on. This approach is taken by the algorithm developed
+in Section~\ref{5:sec:contribution}. It is proven in
+Section~\ref{5:sec:cg-invariance} that despite the difference in
+approach, the resulting coarse grid is the same as that selected by
+CLJP-c.
+
+\subsection{BSIS}
+\label{sec:bsis}
+In this section, new techniques for searching the graph of $S$ for new
+$C$-points and subsequently updating the weights of remaining vertices
+are developed. The new algorithm is labeled Bucket Sorted Independent
+Sets (BSIS) to reflect the data structure used.
+
+Like CLJP-c, BSIS depends on graph coloring, but utilizes modified
+routines for search and weight update. Furthermore, rather than
+applying the color information to augment vertex weights, BSIS uses
+the colors in a bucket data structure. Once initialized, this data
+structure selects independent sets, which satisfy the conditions in
+(\ref{5:eqn:D-conditions}), in constant time.
+
+\subsection{Motivation}
+\label{sec:motivation}
+CLJP and its descendents select an independent set $D$ in each
+iteration. Stated originally in Section~\ref{3:sec:CLJP}, the
+condition for selecting $D$ is that all vertices $i \in D$ must
+satisfy
+\begin{equation}
+\label{5:eqn:D-conditions}
+w_i > w_j\;\textrm{for all } j \in \mathcal{N}_i.
+\end{equation}
+CLJP and CLJP-c rely on a search routine to locate locally maximal
+weights and on a weight update routine to modify weights of vertices
+connected to new $C$-points.
+
+The algorithms for searching and updating vertex weights in CLJP in
+detail are examined in this section. In particular, the impact of
+using a sparse matrix format on the coarsening procedure. The
+pseudo-code below assumes the software uses a compressed sparse row
+(CSR)~\cite{saadBook} matrix format or other similar format, which are
+common matrix formats in numerical software. CSR provides low memory
+costs for storing sparse matrices and provides efficient access to the
+nonzeros in a row. Accessing the nonzeros in a column is an expensive
+operation in this format and strongly influences the weight update
+routine in CLJP-style algorithms because $S$ is, in general, not
+symmetric.
+
+The search step in CLJP is implemented as shown in
+Algorithm~\ref{5:alg:search}.
+\begin{lstlisting}[caption={Coarse-Grid Selection Graph Search},label=5:alg:search]
+%\textsc{Search-Graph}$(S,\, C,\, F)$%
+$D \leftarrow \emptyset$
+for $i$ in $(C \cup F)$
+  if $w_i > w_j,\,\forall j \in \mathcal{N}_i$
+    $D \leftarrow D \cup \{i\}$
+  end
+end
+return $D$
+\end{lstlisting}
+% \begin{algorithm}[h]
+% \caption{Coarse-Grid Selection Graph Search}
+% \label{5:alg:search}
+% \textsc{Search-Graph}$(S,\, C,\, F)$ \{
+% \begin{algorithmic}[1]
+% \STATE $D \leftarrow \emptyset$
+% \FORALL{$i \notin (C \cup F)$}
+% \IF{$w_i > w_j,\,\forall j \in \mathcal{N}_i$}
+% \STATE $D \leftarrow D \cup \{i\}$
+% \ENDIF
+% \ENDFOR
+% \RETURN $D$
+% \end{algorithmic}
+% \}
+% \end{algorithm}
+In the first iteration, Line~3 is run $2|E|$ times. The total cost of
+search in constructing the coarse grid depends on the number of
+iterations needed. Even in the best case of $\Omega(E)$ time, the cost
+is significant when the graph contains large numbers of edges, as
+usually happens on the lower levels in the grid hierarchy
+(see~\cite{alber-PCGS} for examples). In the next section, a new
+technique is introduced for conducting the search in coarse-grid
+selection algorithms independent of the number of edges in the graph.
+
+Pseudo-code for the weight update in CLJP is shown in Algorithm~\ref{5:alg:setup}.
+\begin{lstlisting}[caption={CLJP Weight Update for CSR Matrix},label=5:alg:setup]
+%\textsc{Update-Weights}$(S,\, D,\, C,\, F,\, w)$%
+for $d \in D$
+  for $i \in S_d$
+    $w_i \leftarrow w_i - 1$    //see %Figure~\ref{3:fig:CLJP-update-heuristics} left%
+    $S_d = S_d \setminus \{i\}$ //removing edge from graph
+  end
+end
+for $i \notin (C \cup F)$
+  for $k$ originally in $S_i$
+    if $k \in D$
+      mark $k$ NEW-C-POINT
+    end
+  end
+  for $j \in S_i$
+    if $j \notin D$
+      for $k \in S_j$
+        if $k$ is marked NEW-C-POINT      // $i$ and $j$ mutually influenced by $k$
+          $w_j \leftarrow w_j - 1$        // see %Figure~\ref{3:fig:CLJP-update-heuristics} right%
+          $S_i = S_i \setminus \{j\}$     // remove edge from $j$ to $i$
+        end
+      end
+    end
+  end
+  for $k$ originally in $S_i$
+    if $k \in D$
+      unmark $k$
+      $S_i = S_i \setminus \{k\}$         // remove edge from $k$ to $i$, if present
+    end
+  end
+end
+\end{lstlisting}
+%\begin{algorithm}[h]
+%\caption{CLJP Weight Update for CSR Matrix}
+%\label{5:alg:setup}
+%\textsc{Update-Weights}$(S,\, D,\, C,\, F,\, w)$ \{
+%\begin{algorithmic}[1]
+%\FORALL{$d \in D$}
+%\FORALL{$i \in S_d$}
+%\STATE $w_i \leftarrow w_i - 1$ \COMMENT{see
+%  Figure~\ref{3:fig:CLJP-update-heuristics} left}
+%\STATE $S_d = S_d \setminus \{i\}$ \COMMENT{removing edge from graph}
+%\ENDFOR
+%\ENDFOR
+%\FORALL{$i \notin (C \cup F)$}
+%\FORALL{$k$ originally in $S_i$}
+%\IF{$k \in D$}
+%\STATE mark $k$ NEW-C-POINT
+%\ENDIF
+%\ENDFOR
+%\FORALL{$j \in S_i$}
+%\IF{$j \notin D$}
+%\FORALL{$k \in S_j$}
+%\IF[$i$ and $j$ mutually influenced by $k$]{$k$ is marked NEW-C-POINT}
+%\STATE $w_j \leftarrow w_j - 1$ \COMMENT{see
+%  Figure~\ref{3:fig:CLJP-update-heuristics} right}
+%\STATE $S_i = S_i \setminus \{j\}$ \COMMENT{remove edge from $j$ to $i$}
+%\ENDIF
+%\ENDFOR
+%\ENDIF
+%\ENDFOR
+%\FORALL{$k$ originally in $S_i$}
+%\IF{$k \in D$}
+%\STATE unmark $k$
+%\STATE $S_i = S_i \setminus \{k\}$ \COMMENT{remove edge from $k$ to $i$,
+%  if present}
+%\ENDIF
+%\ENDFOR
+%\ENDFOR
+%\end{algorithmic}
+%\}
+%\end{algorithm}
+The level of complication in this update routine is due to the CSR
+format and the need to find vertices strongly influenced by new
+$C$-points. When a new $C$-point $k$ is selected, the first type of
+weight update is trivial since determining the vertices in $S_k$ is
+inexpensive. The second type of update is more expensive since the
+vertices influenced by $k$ are difficult to determine in a CSR
+format. The update requires a search of many vertices $i$ and all of
+their strong influencing neighbors $j$. The routine then searches
+strongly influencing $j$ to determine if any $k \in D$ strongly
+influences both $i$ and $j$. The cost increases dramatically as the
+density of $S$ increases. Large operator complexities have a
+disproportionately large impact on coarse-grid selection run time. In
+the next section, a modified update routine to compliment the new
+search technique is introduced.
+
 \subsection{Bucket Sorted Independent Sets Algorithm}
 The BSIS algorithm creates a bucket data structure enabling a search
 for new $C$-points without individually scanning each vertex and
@@ -619,7 +689,7 @@ CLJP-c. Chapter~\ref{chap:conclusions} describes plans for continued
 investigation into decreasing the cost of weight update in coarsening
 algorithms.
 
-\section{Weight Update Aggregation}
+\subsection{Weight Update Aggregation}
 \label{5:sec:agg}
 Whenever a vertex weight is updated, BSIS moves the corresponding
 vertex to a new location in the data structure. During the selection
@@ -655,7 +725,7 @@ in the same location and only moves them when necessary. As shown in
 Section~\ref{5:sec:experiments}, aggregation of the weight updates
 leads to significant savings in computational cost.
 
-\section{Experimental Results}
+\subsection{Experimental Results}
 \label{5:sec:experiments}
 To demonstrate BSIS, the algorithm is compared with CLJP-c. The test
 problem is the 3D 7-point Laplacian on a structured grid:
@@ -707,14 +777,14 @@ the methods and concepts in this research are also applicable to other
 coarsening algorithms and possibly to other elements in the AMG setup
 phase.
 
-\section{BSIS Variants}
+\subsection{BSIS Variants}
 The ideas developed in this chapter are applicable to other coarsening
 algorithms that utilize a graph coloring step, such as color-based
 methods designed to satisfy heuristic H1$^\prime$. The PMIS-c1
 algorithm is expected to benefit from BSIS and is expected to perform
 naturally in parallel since vertex weights are not updated in PMIS.
 
-\section{Parallelizing BSIS}
+\subsection{Parallelizing BSIS}
 Using BSIS in a parallel algorithm presents challenges because the
 parallelism in BSIS is very fine-grained. Its elegance and potential
 to greatly improve the efficiency of coarse-grid selection motivates
@@ -792,6 +862,10 @@ doing more of the same work, but by avoiding communication. The second
 and third ideas are similar in nature and both involve using dynamic
 load balancing
 techniques~\cite{DevineBomanKarypisPP04,CybDLB,deCoughnyLB,SchloegelLB,ZoltanParHyp06ipdps,ZoltanParHypRepart07}.
+
+\section{Conclusions}
+\label{sec:conclusions}
+
 
 \bibliographystyle{elsart-num}
 \bibliography{paper}
