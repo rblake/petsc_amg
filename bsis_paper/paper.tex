@@ -148,9 +148,54 @@ quality measure based on relaxation.
 
 \subsection{Independent Set-Based Selection}
 \label{sec:indep-set-based}
-Independent set-based coarse grid selection algorithms rely on
-\emph{strength of connection} measures to ascertain the influence
-between unknowns.
+Independent set-based coarse grid selection algorithms implement three
+routines to select coarse grids: initialization, independent set
+selection, and weight update. A general independent-set based
+coarsening algorithm is shown in
+Algorithm~\ref{alg:general-indep-set}.
+\begin{lstlisting}[caption={Independent Set-Based Coarse Grid
+Selection},label=alg:general-indep-set]
+%\textsc{Indep-Set-Coarse-Grid-Selection}$(\Omega)$:%
+$F \leftarrow \emptyset$
+$C \leftarrow \emptyset$
+$w \leftarrow\,$%\textsc{Initialize-Weights}$(\Omega)$%
+while $\Omega \ne \emptyset$
+   $D \leftarrow\,$%\textsc{Select-Indep-Set}$(w,\, \Omega)$%
+   $(F,\, C,\, \Omega,\, w) \leftarrow\,$%\textsc{Update-Weights}$(F,\,
+                                C,\, \Omega,\, w)$%
+end
+\end{lstlisting}
+
+Each vertex in the graph is assigned a weight based on its merit to
+becoming a $C$-point. The largest weights are conferred to vertices
+best suited to become $C$-points. The quality of potential $C$-points
+is quantified by \emph{strength of connection} measures. The classical
+strength of connection measure is based entirely on the relative sizes
+of off-diagonal nonzeros in $A$. In the classical definition, the set
+of unknowns that unknown $i$ strongly depends upon is defined as
+\begin{equation}
+\label{2:eqn:S_i}
+S_i = \left\{j: i \ne j \textrm{ and }|a_{ij}| \ge \theta \max_{k \ne
+i}|a_{ik}|\right\},
+\end{equation}
+where $a_{ij}$ is the nonzero in row $i$, column $j$ of matrix $A$ and
+$0 < \theta \le 1$. The set of unknowns that $i$ strongly influences,
+denoted $S_i^T$, is defined as the set of unknowns that strongly
+depend on $i$: $S_i^T = \{j: i \in S_j\}$.
+
+This classical strength definition is formulated based on M-matrix
+properties and does not model the influence between unknowns in
+general cases. The formulation of new, effective, and inexpensive
+strength of connection measures is an active area of
+research~\cite{Brannick2005} and has the potential to extend the
+applicability of AMG solvers.
+
+Vertex $i$ is eligible to be added to the independent set $D$ if the
+following condition is satisfied:
+\begin{equation}
+  \label{eq:D-selection}
+  w_i > w_j,\, \forall j \in S_i \cup S_i^T.
+\end{equation}
 
 Many independent set-based coarsening algorithms form $\Omega_{k+1}$
 using the following heuristics.
