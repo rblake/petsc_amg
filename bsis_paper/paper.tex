@@ -148,6 +148,28 @@ quality measure based on relaxation.
 
 \subsection{Independent Set-Based Selection}
 \label{sec:indep-set-based}
+Many independent set-based coarsening algorithms form $\Omega_{k+1}$
+using the following heuristics.
+\begin{description}
+\item[H1:] For each unknown $j$ that strongly influences $F$-point
+  $i$, $j$ is either a $C$-point or strongly depends on a $C$-point
+  $k$ that also strongly influences $i$.
+\item[H2:] The set of $C$-points needs to form a maximal independent
+  set in the reduced graph of $S$ such that no $C$-point strongly
+  depends on another $C$-point.
+\end{description}
+H1 and H2 cannot, in general, be satisfied simultaneously, so H1 is
+enforced by independent set-based methods, while H2 serves as a
+guideline whose purpose is to encourage selection of small
+$|\Omega_{k+1}|$.
+
+Some independent set-based coarsening algorithms use a variant of H1,
+called \hp, which is a relaxed version of H1.
+\begin{description}
+\item[\hp] Each $F$-point must be strongly influenced by at least one
+  $C$-point.
+\end{description}
+
 Independent set-based coarse grid selection algorithms implement three
 routines to select coarse grids: initialization, independent set
 selection, and weight update. A general independent-set based
@@ -190,34 +212,35 @@ strength of connection measures is an active area of
 research~\cite{Brannick2005} and has the potential to extend the
 applicability of AMG solvers.
 
-Vertex $i$ is eligible to be added to the independent set $D$ if the
-following condition is satisfied:
+In classical coarsening, the independent set $D$ consists of a single
+vertex $i$ in each iteration, where $w_i \ge w_j,\, \forall j \in S_i
+\cup S_i^T$. Forming independent sets with only a single vertex is
+inefficient in parallel, so parallel independent set methods use
+different initialization techniques leading to the ability to form
+larger independent sets. In these algorithms vertex $i$ is eligible to
+be added to the independent set $D$ if the following condition is
+satisfied:
 \begin{equation}
   \label{eq:D-selection}
   w_i > w_j,\, \forall j \in S_i \cup S_i^T.
 \end{equation}
+The research presented here focuses on the independent set criterion
+in~(\ref{eq:D-selection}).
 
-Many independent set-based coarsening algorithms form $\Omega_{k+1}$
-using the following heuristics.
-\begin{description}
-\item[H1:] For each unknown $j$ that strongly influences $F$-point
-  $i$, $j$ is either a $C$-point or strongly depends on a $C$-point
-  $k$ that also strongly influences $i$.
-\item[H2:] The set of $C$-points needs to form a maximal independent
-  set in the reduced graph of $S$ such that no $C$-point strongly
-  depends on another $C$-point.
-\end{description}
-H1 and H2 cannot, in general, be satisfied simultaneously, so H1 is
-enforced by independent set-based methods, while H2 serves as a
-guideline whose purpose is to encourage selection of small
-$|\Omega_{k+1}|$.
+The weight update routines used in independent set-based coarsening
+algorithms are varied but primarily take one of two forms: routines
+that decrease the values of weights and routines that increase the
+value of weights. In all cases, a relatively large weight confers
+large value for having the corresponding vertex become a $C$-point.
 
-Some independent set-based coarsening algorithms use a variant of H1,
-called \hp, which is a relaxed version of H1.
-\begin{description}
-\item[\hp] Each $F$-point must be strongly influenced by at least one
-  $C$-point.
-\end{description}
+Many independent set-based coarsening algorithms have been
+developed. Ruge-St\"uben coarsening, also called classical coarsening,
+is introduced in~\cite{Ruge1987}. The first parallel independent
+set-based coarsening algorithms appeared approximately ten years ago
+and include RS3~\cite{Henson2002}, CLJP~\cite{Cleary1998}, BC-RS and
+Falgout~\cite{Henson2002}, PMIS and HMIS~\cite{Sterck2006},
+CLJP-c~\cite{alber-cljpc}, PMIS-c1 and PMIS-c2~\cite{alber-PCGS}, and
+PMIS Greedy~\cite{Butler2006}, to name a few.
 
 \section{Invariance of Selection in Independent Set-Based Methods}
 \label{sec:invariance}
@@ -225,9 +248,16 @@ called \hp, which is a relaxed version of H1.
 Theory is developed in this section to prove coarse-grid selection
 invariance in general independent set-based algorithms. The algorithms
 considered thus far select independent sets using
-(\ref{5:eqn:D-conditions}), meaning $i$ is eligible to be in $D$ if
-its weight is larger than the weights of vertices in its neighborhood
-$\mathcal{N}_i$. Recall the neighborhood of $i$
+(\ref{eq:D-selection}), meaning vertex $i$ is eligible to be in $D$ if
+its weight is larger than the weights of vertices in its neighborhood,
+which is defined as follows.
+\begin{defn}
+\label{def:neighborhood}
+The \emph{neighborhood} of vertex $i$, denoted $\mathcal{N}_i$, is the
+union of the sets containing the strong influences of $i$ and the
+strong dependencies of $i$: $\mathcal{N}_i = S_i \cup S_i^T$.
+\end{defn}
+Recall the neighborhood of $i$
 (Definition~\ref{3:def:neighborhood}) is the set of vertices strongly
 influenced by $i$ or strongly influencing $i$. Algorithms relying on
 different and larger neighborhoods, such as \emph{distance-$d$
