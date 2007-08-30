@@ -1,0 +1,19 @@
+
+include ${PETSC_DIR}/bmake/common/variables
+
+TESTS += multigrid_test1
+
+all: ${TESTS}
+clean:
+	rm -f *.o ${TESTS}
+
+%: %.o
+	${PCC} ${PCC_LINKER_FLAGS} -o $@ $^ ${PETSC_KSP_LIB}
+
+%.o: %.cc
+	${CXX} -c ${PCC_FLAGS} ${COPTFLAGS} ${CFLAGS} ${CCPPFLAGS} $(FLAGS) -c  -o $@ $<
+
+%.o: %.c  
+	${PCC} -c ${PCC_FLAGS} ${COPTFLAGS} ${CFLAGS} ${CCPPFLAGS} $(FLAGS) -c  -o $@ $<
+
+%: %.c #Disable default makefile rule.
