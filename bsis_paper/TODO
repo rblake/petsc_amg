@@ -5,3 +5,9 @@
 * Define Ax = b in beginning.
 * Discuss coarse grid selection problem as being graph problem with
   graph from A.
+
+* Not too thrilled with the way the comments in the algorithms
+  look. The environment being used to generate the algorithms seems to
+  conflict with "latex philosophy" in that formatting of the algorithm
+  is explicitly affected by how spaces are inserted into the document
+  source code.
