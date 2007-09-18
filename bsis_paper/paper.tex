@@ -116,28 +116,27 @@ In AMG, coarse-grid selection is the process of selecting the degrees
 of freedom for the coarse level problem. In classical AMG, degrees of
 freedom on a coarse level are a subset of the degrees of freedom on a
 finer level. Smoothed
-aggregation~\cite{Vanek1996,Vanek2001,brezina2005} forms a
-coarse-level degree of freedom by aggregating several fine-level
-degrees of freedom. In this paper, we study coarsening for classical
-AMG.
+aggregation~\cite{Vanek1996,Vanek2001,brezina2005}, on the other hand,
+forms a coarse-level degree of freedom by aggregating several
+fine-level degrees of freedom. In this paper, we study coarsening for
+classical AMG.
 
 Given a set of fine-level degrees of freedom, $\Omega_k$, coarse-grid
 selection for classical AMG selects a set of coarse-level degrees of
 freedom $\Omega_{k+1} \subset \Omega_k$. Several approaches have been
-developed for selecting the coarse grid.
-
-Independent set-based algorithms are most numerous and all trace their
-roots to the classical AMG coarsening algorithm, RS
+developed for selecting the coarse grid, with independent set-based
+approaches the most numerous. Independent set-based algorithms trace
+their roots to the classical AMG coarsening algorithm, RS
 coarsening~\cite{Ruge1987}. These methods are our focus and are
 discussed in more detail in the next section.
 
 Other methods take substantially different approaches to
-coarsening. The coarsening technique in~\cite{Griebel2006} develops a
-parallel coarsening algorithm that utilizes RS. On each processor, RS
-selects several different coarse grids, and then one coarse grid is
-selected per processor in a way to minimize special treatment on
-processor boundaries. In~\cite{MacLachlan2006}, a greedy approach is
-used to produce a good splitting of the unknowns into fine-grid and
+coarsening. The technique in~\cite{Griebel2006} develops a parallel
+coarsening algorithm that utilizes RS. On each processor, RS selects
+several different coarse grids, and then one coarse grid is selected
+per processor in a way to minimize special treatment on processor
+boundaries. In~\cite{MacLachlan2006}, a greedy approach is used to
+produce a good splitting of the unknowns into fine-grid and
 coarse-grid sets. Subdomain blocking techniques~\cite{Krechel2001}
 offer another approach for parallel coarse-grid selection by
 decoupling coarse grids and alleviating the need for communication on
@@ -183,18 +182,18 @@ $C \leftarrow \emptyset$
 $w \leftarrow\,$%\textsc{Initialize-Weights}$(\Omega)$%
 while $\Omega \ne \emptyset$
    $D \leftarrow\,$%\textsc{Select-Indep-Set}$(w,\, \Omega)$%
-   $(F,\, C,\, \Omega,\, w) \leftarrow\,$%\textsc{Update-Weights}$(F,\,
-                                C,\, \Omega,\, w)$%
+   $(F,\, C,\, \Omega,\, w) \leftarrow\,$%\textsc{Update-Weights}$(F,\,C,\, \Omega,\, w)$%
 end
 \end{lstlisting}
 
 Each vertex in the graph is assigned a weight based on its merit to
 becoming a $C$-point. The largest weights are conferred to vertices
-best suited to become $C$-points. The quality of potential $C$-points
-is quantified by \emph{strength of connection} measures. The classical
-strength of connection measure is based entirely on the relative sizes
-of off-diagonal nonzeros in $A$. In the classical definition, the set
-of unknowns that unknown $i$ strongly depends upon is defined as
+best suited to become $C$-points, where the quality of potential
+$C$-points is quantified by \emph{strength of connection}
+measures. The classical strength of connection measure is based
+entirely on the relative sizes of off-diagonal nonzeros in $A$. In the
+classical definition, the set of unknowns that unknown $i$ strongly
+depends upon is defined as
 \begin{equation}
 \label{2:eqn:S_i}
 S_i = \left\{j: i \ne j \textrm{ and }|a_{ij}| \ge \theta \max_{k \ne
@@ -216,22 +215,22 @@ In classical coarsening, the independent set $D$ consists of a single
 vertex $i$ in each iteration, where $w_i \ge w_j,\, \forall j \in S_i
 \cup S_i^T$. Forming independent sets with only a single vertex is
 inefficient in parallel, so parallel independent set methods use
-different initialization techniques leading to the ability to form
-larger independent sets. In these algorithms vertex $i$ is eligible to
-be added to the independent set $D$ if the following condition is
-satisfied:
+different initialization techniques designed to enable the selection
+of larger independent sets. In these algorithms, vertex $i$ is
+eligible to be added to the independent set $D$ if the following
+condition is satisfied:
 \begin{equation}
   \label{eq:D-selection}
   w_i > w_j,\, \forall j \in S_i \cup S_i^T.
 \end{equation}
-The research presented here focuses on the independent set criterion
-in~(\ref{eq:D-selection}).
+The research presented here focuses primarily on the independent set
+criterion in~(\ref{eq:D-selection}).
 
 The weight update routines used in independent set-based coarsening
 algorithms are varied but primarily take one of two forms: routines
 that decrease the values of weights and routines that increase the
-value of weights. In all cases, a relatively large weight confers
-large value for having the corresponding vertex become a $C$-point.
+value of weights. In all cases, a vertex with a large weight has high
+fitness for becoming a $C$-point.
 
 Many independent set-based coarsening algorithms have been
 developed. Ruge-St\"uben coarsening, also called classical coarsening,
@@ -257,11 +256,8 @@ The \emph{neighborhood} of vertex $i$, denoted $\mathcal{N}_i$, is the
 union of the sets containing the strong influences of $i$ and the
 strong dependencies of $i$: $\mathcal{N}_i = S_i \cup S_i^T$.
 \end{defn}
-Recall the neighborhood of $i$
-(Definition~\ref{3:def:neighborhood}) is the set of vertices strongly
-influenced by $i$ or strongly influencing $i$. Algorithms relying on
-different and larger neighborhoods, such as \emph{distance-$d$
-neighborhoods}, are conceivable.
+Algorithms that rely on different and larger neighborhoods, such as
+\emph{distance-$d$ neighborhoods}, are conceivable.
 \begin{defn}
 The \emph{distance-$d$ neighborhood} of $i$, denoted
 $\mathcal{N}_i^d$, is the set of vertices within $d$ hops of $i$ in
@@ -286,8 +282,8 @@ cases. It is assumed, however, the matrix formed by $\mathcal{N}_*^s$
 equivalent to stating if $j \in \mathcal{N}_i^s$, then $i \in
 \mathcal{N}_j^s$ for all $i$ and $j$ in the vertex set. Furthermore,
 this discussion assumes the weight of vertex $i$ is only decremented
-following weight updates and is never modified due to the assignment
-of a vertex $j \notin \mathcal{N}_i^s$ to the $C$-point set.
+following weight updates and is unaffected by the assignment of a
+vertex $j \notin \mathcal{N}_i^s$ to the $C$-point set.
 
 Given a symmetric, but otherwise arbitrary, set of selection
 neighborhoods, the set of vertices potentially able to affect the
@@ -333,9 +329,8 @@ selection.
 \end{defn}
 
 Vertices in $D_0$ are destined to become $C$-points regardless of the
-algorithm used to build coarse grids. In the independent set-based
-algorithms discussed in Chapters~\ref{chap:CGS}
-and~\ref{chap:color-based}, all $D_0$ vertices become $C$-points in
+algorithm used to build coarse grids. In most independent set-based
+algorithms developed so far, all $D_0$ vertices become $C$-points in
 the first iteration. Any algorithm constructed, however, eventually
 selects all $D_0$ vertices as $C$-points, as proven in the following
 lemma.
