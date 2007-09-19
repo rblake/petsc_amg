@@ -420,7 +420,7 @@ possibly more efficient techniques.
 \label{5:sec:contribution}
 
 \subsection{CLJP-c}
-Recall that CLJP-c colors the graph of $S$ before selecting
+CLJP-c~\cite{alber-cljpc} colors the graph of $S$ before selecting
 $C$-points, and the colors are used as one component of the vertex
 weights. As a result, the structure of the coarse grids selected is
 improved. More formally, the use of graph coloring provides the
@@ -443,19 +443,20 @@ guaranteed in CLJP, although is unlikely to occur. The following
 corollaries are a result of
 Theorem~\ref{5:theorem:CLJPc-neighbor-independence}.
 \begin{cor}
-Any set of vertices in the graph of $S$ that share the same weight is
-an independent set.
+\label{cor:same-weight-indep-set}
+Any set of vertices in the graph of $S$ sharing the same weight are an
+independent set.
 \end{cor}
 \begin{cor}
-\label{5:cor:max-weight-indep-set}
+\label{cor:max-weight-indep-set}
 The set of vertices with the largest weight in the graph of $S$ form
 an independent set satisfying~\ref{5:eqn:D-conditions}. That is, each
 vertex in that independent set has a uniquely maximal weight in its
 neighborhood.
 \end{cor}
-The first corollary states that independent sets can be selected in
-the graph simply by selecting sets of vertices with the same
-weight. Corollary~\ref{5:cor:max-weight-indep-set} refines this
+Corollary~\ref{cor:same-weight-indep-set} states that independent sets
+can be selected in the graph simply by selecting sets of vertices with
+the same weight. Corollary~\ref{cor:max-weight-indep-set} refines this
 observation to a subset of vertices guaranteed to satisfy the
 selection criterion. In particular, it shows it is possible to build
 the coarse grid by selecting vertices with the maximum weight,
@@ -470,7 +471,7 @@ CLJP-c.
 \label{sec:bsis}
 In this section, new techniques for searching the graph of $S$ for new
 $C$-points and subsequently updating the weights of remaining vertices
-are developed. The new algorithm is labeled Bucket Sorted Independent
+are developed. The new algorithm is named Bucket Sorted Independent
 Sets (BSIS) to reflect the data structure used.
 
 Like CLJP-c, BSIS depends on graph coloring, but utilizes modified
