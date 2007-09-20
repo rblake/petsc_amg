@@ -72,6 +72,17 @@
 % \address[label2]{}
 
 \begin{abstract}
+Independent set-based coarse-grid selection algorithms are defined by
+policies regarding: weight initialization, independent set selection,
+and weight update. We develop theory demonstrating that all algorithms
+employing the same policies for each routine produce identical coarse
+grids, regardless of the implementation. This result on coarse grid
+invariance is applied to produce a new coarse-grid selection algorithm
+that is substantially more efficient than an existing algorithm that
+utilizes the same policies. Experimental results comparing two
+versions of the new algorithm and an older algorithm are presented,
+followed by a discussion on possible approaches to effectively
+parallelize the new algorithms.
 \end{abstract}
 
 \begin{keyword}
@@ -484,9 +495,8 @@ structure selects independent sets, which satisfy the conditions in
 \subsection{Motivation}
 \label{sec:motivation}
 CLJP and its descendents select an independent set $D$ in each
-iteration. Stated originally in Section~\ref{3:sec:CLJP}, the
-condition for selecting $D$ is that all vertices $i \in D$ must
-satisfy
+iteration. Recall, the condition for selecting $D$ is that all
+vertices $i \in D$ must satisfy
 \begin{equation}
 \label{5:eqn:D-conditions}
 w_i > w_j\;\textrm{for all } j \in \mathcal{N}_i.
@@ -647,7 +657,7 @@ group of buckets. More notably, the vertices in a bucket form an
 independent set (e.g., vertices 4, 16, and 21).
 
 In each iteration, the non-empty bucket with largest weight forms $D$
-(see Corollary~\ref{5:cor:max-weight-indep-set}). These vertices are
+(see Corollary~\ref{cor:max-weight-indep-set}). These vertices are
 assigned to the $C$-point set and removed from the data
 structure. Vertex weight updates lead to corresponding updates to the
 data structure, and new $F$-points are removed from the data
