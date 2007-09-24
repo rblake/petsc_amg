@@ -310,7 +310,7 @@ $\mathcal{N}_i^0 = \emptyset$.
 For a general independent set-based coarse-grid selection algorithm, a
 vertex $i$ is eligible to be added to $D$ if
 \begin{equation}
-\label{5:eqn:general-selection}
+\label{eqn:general-selection}
 w_i > w_j\;\textrm{for all } j \in \mathcal{N}_i^s,
 \end{equation}
 where $\mathcal{N}_i^s$ is the \emph{selection neighborhood} of
@@ -338,21 +338,21 @@ $\mathcal{N}_i^s$, excluding $i$. That is, $\mathcal{N}_i^{2s} =
 \end{defn}
 
 When a vertex $i$ satisfies the generalized selection
-condition~(\ref{5:eqn:general-selection}), no other valid $C$-point
+condition~(\ref{eqn:general-selection}), no other valid $C$-point
 assignments are able to affect $w_i$. This is formalized below.
 \begin{lem}
 \label{5:lemma:C-lock}
-If (\ref{5:eqn:general-selection}) is satisfied for vertex $i$, then
+If (\ref{eqn:general-selection}) is satisfied for vertex $i$, then
 $i$ must be the next vertex in $\{i\} \cup \mathcal{N}_i^s$ to become
 a $C$-point, regardless of any other selections and updates made in
 the graph.
 \end{lem}
 \begin{proof}
-The satisfaction of (\ref{5:eqn:general-selection}) means $w_i > w_j$
+The satisfaction of (\ref{eqn:general-selection}) means $w_i > w_j$
 for all $j \in \mathcal{N}_i^s$. For $i$ to not become a $C$-point,
 its weight must become smaller than some $j \in \mathcal{N}_i^s$. The
 weight of $i$, however, is not decremented unless some $j \in
-\mathcal{N}_i^s$ satisfies~(\ref{5:eqn:general-selection}) and becomes
+\mathcal{N}_i^s$ satisfies~(\ref{eqn:general-selection}) and becomes
 a $C$-point, which is impossible until after $i$ is assigned to the
 $C$-point set.
 \end{proof}
@@ -363,7 +363,7 @@ inductive argument is presented below. The base case is provided by
 the first set of vertices satisfying the general selection conditions.
 
 Let $D_0$ be the set of all vertices satisfying
-(\ref{5:eqn:general-selection}) in the first iteration of coarse-grid
+(\ref{eqn:general-selection}) in the first iteration of coarse-grid
 selection. Vertices in $D_0$ become $C$-points regardless of the
 algorithm used to build coarse grids. In most independent set-based
 algorithms developed so far, all $D_0$ vertices become $C$-points in
@@ -377,7 +377,7 @@ algorithms select vertices in $D_0$ as $C$-points.
 \end{lem}
 \begin{proof}
 The proof follows from Lemma~\ref{5:lemma:C-lock}. All vertices in
-$D_0$ satisfy the selection condition~(\ref{5:eqn:general-selection}),
+$D_0$ satisfy the selection condition~(\ref{eqn:general-selection}),
 so the assignment of any other $C$-point has no effect on the weight
 of a $D_0$ vertex.
 \end{proof}
@@ -391,9 +391,8 @@ theorem.
 \label{5:theorem:invariance}
 All independent set-based coarse-grid selection algorithms given the
 same initial weights and using the same selection neighborhood,
-selection criterion based on~(\ref{5:eqn:general-selection}), and
-weight update heuristics as described above select identical coarse
-grids.
+selection criterion based on~(\ref{eqn:general-selection}), and weight
+update heuristics as described above select identical coarse grids.
 \end{thm}
 \begin{proof}
 Let $c$ be the vertices in the extended selection neighborhood of $i$
@@ -445,8 +444,12 @@ algorithms. This information enables the design and implementation of
 new algorithms that yield identical coarse grids using different and
 possibly more efficient techniques.
 
-\section{Bucket Sorted Independent Set Selection}
+\section{Bucket-Sorted Independent Set Selection}
 \label{sec:bsis}
+In this section, we introduce Bucket-Sorted Independent Sets
+(BSIS). BSIS uses the same policies as CLJP-c, so from the theory in
+Section~\ref{sec:invariance}, BSIS and CLJP-c produce the same coarse
+grids. BSIS is designed to be more efficient than CLJP-c.
 
 \subsection{CLJP-c}
 CLJP-c~\cite{alber-cljpc} colors the graph of $S$ before selecting
@@ -479,69 +482,42 @@ independent set.
 \begin{cor}
 \label{cor:max-weight-indep-set}
 The set of vertices with the largest weight in the graph of $S$ form
-an independent set satisfying~\ref{5:eqn:D-conditions}. That is, each
-vertex in that independent set has a uniquely maximal weight in its
-neighborhood.
+an independent set satisfying~(\ref{eqn:general-selection}). That is,
+each vertex in that independent set has a uniquely maximal weight in
+its neighborhood.
 \end{cor}
 Corollary~\ref{cor:same-weight-indep-set} states that independent sets
 can be selected in the graph simply by selecting sets of vertices with
 the same weight. Corollary~\ref{cor:max-weight-indep-set} refines this
 observation to a subset of vertices guaranteed to satisfy the
 selection criterion. In particular, it shows it is possible to build
-the coarse grid by selecting vertices with the maximum weight,
-updating weights, selecting the next set of vertices with maximum
-weight, and so on. This approach is taken by the algorithm developed
-in Section~\ref{sec:bsissub}. It is proven in
-Section~\ref{5:sec:cg-invariance} that despite the difference in
-approach, the resulting coarse grid is the same as that selected by
-CLJP-c.
+the coarse grid by selecting vertices with the maximum weight in the
+graph, updating weights, selecting the next set of vertices with
+maximum weight, and so on. This approach is taken by the BSIS
+algorithm.
 
-\subsection{BSIS}
-\label{sec:bsissub}
-In this section, new techniques for searching the graph of $S$ for new
-$C$-points and subsequently updating the weights of remaining vertices
-are developed. The new algorithm is named Bucket Sorted Independent
-Sets (BSIS) to reflect the data structure used.
-
-Like CLJP-c, BSIS depends on graph coloring, but utilizes modified
-routines for search and weight update. Furthermore, rather than
-applying the color information to augment vertex weights, BSIS uses
-the colors in a bucket data structure. Once initialized, this data
-structure selects independent sets, which satisfy the conditions in
-(\ref{5:eqn:D-conditions}), in constant time.
-
-\subsection{Motivation}
-\label{sec:motivation}
-CLJP and its descendents select an independent set $D$ in each
-iteration. Recall, the condition for selecting $D$ is that all
-vertices $i \in D$ must satisfy
-\begin{equation}
-\label{5:eqn:D-conditions}
-w_i > w_j\;\textrm{for all } j \in \mathcal{N}_i.
-\end{equation}
-CLJP and CLJP-c rely on a search routine to locate locally maximal
-weights and on a weight update routine to modify weights of vertices
-connected to new $C$-points.
+CLJP and CLJP-c rely on a search routine to locate all vertices
+satisfying~(\ref{eqn:general-selection}) (i.e., vertices with locally
+maximal weights) and on a weight update routine to modify weights of
+vertices in the neighborhoods of new $C$-points.
 
 The algorithms for searching and updating vertex weights in CLJP in
-detail are examined in this section. In particular, the impact of
-using a sparse matrix format on the coarsening procedure. The
-pseudo-code below assumes the software uses a compressed sparse row
-(CSR)~\cite{saadBook} matrix format or other similar format, which are
-common matrix formats in numerical software. CSR provides low memory
-costs for storing sparse matrices and provides efficient access to the
-nonzeros in a row. Accessing the nonzeros in a column is an expensive
-operation in this format and strongly influences the weight update
-routine in CLJP-style algorithms because $S$ is, in general, not
-symmetric.
+detail are examined in this section. The pseudo-code below assumes the
+software uses a compressed sparse row (CSR)~\cite{saadBook} matrix
+format or other similar format, which are common matrix formats in
+numerical software. CSR provides low memory costs for storing sparse
+matrices and provides efficient access to the nonzeros in a
+row. Accessing the nonzeros in a column is an expensive operation in
+this format and strongly influences the weight update routine in
+CLJP-style algorithms because $S$ is, in general, not symmetric.
 
 The search step in CLJP is implemented as shown in
 Algorithm~\ref{5:alg:search}.
 \begin{lstlisting}[caption={Coarse-Grid Selection Graph Search},label=5:alg:search]
 %\textsc{Search-Graph}$(S,\, C,\, F)$%
 $D \leftarrow \emptyset$
-for $i$ in $(C \cup F)$
-  if $w_i > w_j,\,\forall j \in \mathcal{N}_i$
+for $i \notin (C \cup F)$
+  if $w_i > w_j\ \textrm{for all } j \in \mathcal{N}_i$
     $D \leftarrow D \cup \{i\}$
   end
 end
@@ -571,12 +547,12 @@ usually happens on the lower levels in the grid hierarchy
 technique is introduced for conducting the search in coarse-grid
 selection algorithms independent of the number of edges in the graph.
 
-Pseudo-code for the weight update in CLJP is shown in Algorithm~\ref{5:alg:setup}.
-\begin{lstlisting}[caption={CLJP Weight Update for CSR Matrix},label=5:alg:setup]
+Pseudo-code for the weight update in CLJP is shown in Algorithm~\ref{alg:setup}.
+\begin{lstlisting}[caption={CLJP Weight Update for CSR Matrix},label=alg:setup]
 %\textsc{Update-Weights}$(S,\, D,\, C,\, F,\, w)$%
 for $d \in D$
   for $i \in S_d$
-    $w_i \leftarrow w_i - 1$    //see %Figure~\ref{3:fig:CLJP-update-heuristics} left%
+    $w_i \leftarrow w_i - 1$
     $S_d = S_d \setminus \{i\}$ //removing edge from graph
   end
 end
@@ -590,7 +566,7 @@ for $i \notin (C \cup F)$
     if $j \notin D$
       for $k \in S_j$
         if $k$ is marked NEW-C-POINT      // $i$ and $j$ mutually influenced by $k$
-          $w_j \leftarrow w_j - 1$        // see %Figure~\ref{3:fig:CLJP-update-heuristics} right%
+          $w_j \leftarrow w_j - 1$
           $S_i = S_i \setminus \{j\}$     // remove edge from $j$ to $i$
         end
       end
@@ -606,7 +582,7 @@ end
 \end{lstlisting}
 %\begin{algorithm}[h]
 %\caption{CLJP Weight Update for CSR Matrix}
-%\label{5:alg:setup}
+%\label{alg:setup}
 %\textsc{Update-Weights}$(S,\, D,\, C,\, F,\, w)$ \{
 %\begin{algorithmic}[1]
 %\FORALL{$d \in D$}
@@ -647,32 +623,43 @@ end
 The level of complication in this update routine is due to the CSR
 format and the need to find vertices strongly influenced by new
 $C$-points. When a new $C$-point $k$ is selected, the first type of
-weight update is trivial since determining the vertices in $S_k$ is
-inexpensive. The second type of update is more expensive since the
-vertices influenced by $k$ are difficult to determine in a CSR
-format. The update requires a search of many vertices $i$ and all of
-their strong influencing neighbors $j$. The routine then searches
-strongly influencing $j$ to determine if any $k \in D$ strongly
-influences both $i$ and $j$. The cost increases dramatically as the
-density of $S$ increases. Large operator complexities have a
-disproportionately large impact on coarse-grid selection run time. In
-the next section, a modified update routine to compliment the new
-search technique is introduced.
+weight update (Lines 2--7) is trivial since determining the vertices
+in $S_k$ is inexpensive. The second type of update (Lines 8--30) is
+more expensive since the vertices influenced by $k$ are difficult to
+determine in a CSR format. The update requires a search of many
+vertices $i$ and all of their strong influencing neighbors $j$. The
+routine then searches strongly influencing $j$ to determine if any $k
+\in D$ strongly influences both $i$ and $j$. The cost increases
+dramatically as the density of $S$ increases. Large operator
+complexities have a disproportionately large impact on coarse-grid
+selection run time. In the next section, a modified update routine to
+compliment the new search technique is introduced.
 
 \subsection{Bucket Sorted Independent Sets Algorithm}
-The BSIS algorithm creates a bucket data structure enabling a search
-for new $C$-points without individually scanning each vertex and
-associated edges. Figure~\ref{5:fig:bucket-algorithm} illustrates the
-bucket data structure. The number of buckets in the data structure is
-$\max_{i \in S}|S_i^T|$ times the number of colors in the graph. That
-is, each possible weight in $S$ has its own bucket. The vertices are
+\label{sec:bsis-alg}
+In this section, new techniques for searching the graph of $S$ for new
+$C$-points and subsequently updating the weights of remaining vertices
+are developed. The new algorithm is named Bucket Sorted Independent
+Sets (BSIS) to reflect the data structure used.
+
+Like CLJP-c, BSIS depends on graph coloring, but utilizes modified
+routines for search and weight update. Furthermore, rather than
+applying the color information to augment vertex weights, BSIS uses
+the colors in a bucket data structure. Once initialized, this data
+structure selects independent sets, which satisfy the conditions in
+(\ref{5:eqn:D-conditions}), in constant time.
+
+Figure~\ref{5:fig:bucket-algorithm} illustrates the bucket data
+structure. The number of buckets in the data structure is $\max_{i \in
+S}|S_i^T|$ times the number of colors in the graph. That is, each
+possible weight in $S$ has its own bucket. The vertices are
 distributed to the appropriate buckets during the setup of the
 coarse-grid selection algorithm, where the bucket of a newly placed
 vertex depends on the number of vertices it strongly influences and
 its color. For example, Vertex~14 strongly influences six vertices and
 is black. Therefore, it is placed into the black bucket in the sixth
-group of buckets. More notably, the vertices in a bucket form an
-independent set (e.g., vertices 4, 16, and 21).
+group of buckets. Notably, the vertices in a bucket form an
+independent set (e.g., Vertices 14, 16, and 21).
 
 In each iteration, the non-empty bucket with largest weight forms $D$
 (see Corollary~\ref{cor:max-weight-indep-set}). These vertices are
@@ -717,7 +704,7 @@ return non-empty $bucket$ with largest $bucketID$
 % \}
 % \end{algorithm}
 \begin{lstlisting}[caption={BSIS Weight Update},label=5:alg:BSIS-weight-update]
-%\textsc{BSIS-Weight-Update}$(S)$%
+%\textsc{BSIS-Weight-Update}$(S,\, i)$%
 $bucketID \leftarrow (w_i-1)\cdot numColors + color_i$
 $bucket[bucketID].\textsc{Remove}(i)$
 $bucket[bucketID - numColors].\textsc{Insert}(i)$
@@ -744,37 +731,36 @@ $bucket[bucketID - numColors].\textsc{Insert}(i)$
 
 Figure~\ref{5:fig:bucket-algorithm-cp1} illustrates the graph and data
 structure following the first iteration of the algorithm. Vertex~10
-has become a $C$-point and its neighbors weights have been
+has become a $C$-point and its neighbors' weights have been
 updated. Vertices assigned to $F$ or $C$ are removed from the data
 structure and other affected vertices are moved to new locations in
 the data structure. Such vertices are highlighted in red.
 \begin{figure}
   \begin{center}
     \includegraphics[width=0.98\textwidth]{images/BSIS/cp1}
-    \caption{The BSIS data structure after selecting the first
+    \caption{The BSIS data structure following selection of the first
     $C$-point (Vertex 10). The weights of neighbors of the new
     $C$-point are updated. Some neighbors become $F$-points and are
     removed from the data structure. Vertices removed from the data
     structure are highlighted with a red ring in the graph, while
     other neighbors are moved to new locations in the data structure
-    and are highlighted (to help in reading the figure) in the data
+    and are highlighted (to aid in reading the figure) in the data
     structure with a red box.}
     \label{5:fig:bucket-algorithm-cp1}
   \end{center}
 \end{figure}
 
-The weight update routine described in
-Section~\ref{5:sec:s-and-w-update} is very expensive in this context
-because some iterations of BSIS select few $C$-points. For a graph
-with a large number of colors, BSIS may execute dozens or hundreds of
-low-cost iterations to select a coarse grid. Recall the weight update
-routine described loops through all unassigned vertices each time it
-is called, so when it is run by BSIS, work is done on many unaffected
-vertices, which is computationally inefficient.
+The weight update routine described in Algorithm~\ref{alg:setup} is
+very expensive in this context because some iterations of BSIS select
+few $C$-points. For a graph with a large number of colors, BSIS may
+execute dozens or hundreds of low-cost iterations to select a coarse
+grid. Recall the weight update routine described loops through all
+unassigned vertices each time it is called, so when it is run by BSIS,
+work is done on many unaffected vertices.
 
 The largest factor in the cost of the weight update results from
 searching for the second type of weight update in
-Algorithm~\ref{5:alg:setup}, which is done by looping through all
+Algorithm~\ref{alg:setup}, which is done by looping through all
 unassigned vertices since a new $C$-point cannot easily determine
 which vertices it strongly influences in a CSR matrix. It is less
 expensive in this situation to construct the transpose of $S$ than to
@@ -784,9 +770,7 @@ them. The algorithm then loops through all painted vertices and
 determines if any are neighbors. This is a simple solution that has a
 dramatic effect on the performance of BSIS, although the update cost
 remains approximately equivalent to the cost in
-CLJP-c. Chapter~\ref{chap:conclusions} describes plans for continued
-investigation into decreasing the cost of weight update in coarsening
-algorithms.
+CLJP-c.
 
 \subsection{Weight Update Aggregation}
 \label{5:sec:agg}
@@ -795,10 +779,10 @@ vertex to a new location in the data structure. During the selection
 of the coarse grid, the cost of the updates to the data structure is
 non-trivial and, as shown in this section, unnecessary.
 
-Only one bucket in the data is touched during the $C$-point selection
-step: the largest weight non-empty bucket in the data structure. Other
-buckets are subsequently affected by the weight updates resulting from
-new $C$-point assignments. A different approach is possible, however,
+Only one bucket in the data structure is touched during the $C$-point
+selection step: the largest weight non-empty bucket. Other buckets are
+subsequently affected by the weight updates resulting from new
+$C$-point assignments. A different approach is possible, however,
 since the only bucket that must contain the correct vertices is the
 one from which $C$-points are selected.
 
@@ -833,11 +817,6 @@ problem is the 3D 7-point Laplacian on a structured grid:
 (\Omega = (0, 1)^3),\\
 \nonumber u & = & 0 \quad \textrm{on } \partial \Omega.
 \end{eqnarray}
-A 7-point Laplacian is selected since it is a common initial test
-problem and structured problems often lead to the largest operator
-complexities for coarsening algorithms satisfying heuristic H1. By
-creating larger operator complexities, the algorithms are forced to
-traverse more edges in the graph, leading to more work.
 
 Timing data for the selection of all coarse grids in the hierarchy is
 reported. This time includes the cost for all parts of the algorithms,
@@ -869,19 +848,16 @@ is approximately 17\% cheaper than CLJP-c. BSIS with aggregate weight
 updates is 23\% cheaper on the largest problems. The benefit is
 magnified, relative to CLJP-c, for the smaller problems.
 
-Experiment (\ref{5:eqn:Lap}) demonstrates the effectiveness and
-competitiveness of the bucket technique. Increased efficiency for the
-BSIS algorithm is anticipated through further research. Furthermore,
-the methods and concepts in this research are also applicable to other
-coarsening algorithms and possibly to other elements in the AMG setup
+The experiment demonstrates the effectiveness and competitiveness of
+the bucket technique. Increased efficiency for the BSIS algorithm is
+anticipated through further research. Furthermore, the methods and
+concepts in this research are also applicable to other coarsening
+algorithms, such as color-based methods designed to satisfy heuristic
+H1$^\prime$. The PMIS-c1 algorithm, for instance, is expected to
+benefit from BSIS and is expected to perform naturally in parallel
+since vertex weights are not updated in PMIS. The ideas in this
+research may also be applicable to other elements in the AMG setup
 phase.
-
-\subsection{BSIS Variants}
-The ideas developed in this chapter are applicable to other coarsening
-algorithms that utilize a graph coloring step, such as color-based
-methods designed to satisfy heuristic H1$^\prime$. The PMIS-c1
-algorithm is expected to benefit from BSIS and is expected to perform
-naturally in parallel since vertex weights are not updated in PMIS.
 
 \subsection{Parallelizing BSIS}
 Using BSIS in a parallel algorithm presents challenges because the
@@ -964,7 +940,17 @@ techniques~\cite{DevineBomanKarypisPP04,CybDLB,deCoughnyLB,SchloegelLB,ZoltanPar
 
 \section{Conclusions}
 \label{sec:conclusions}
-
+In this paper, we have made two major contributions. First, new
+theoretical results were presented expanding knowledge on the nature
+of independent-set based coarse-grid selection. Algorithms using the
+same rules, with some restrictions, for weight initialization,
+independent set slection, and weight update produce the same coarse
+grids, regardless of the particular implementation of the
+rules. This result decouples the design of policies for selecting
+quality coarse grids from the design and efficiency of the algorithms
+used to select the coarse grids. The BSIS algorithm is designed as an
+example of this. BSIS selects the same coarse grids as CLJP-c, but
+uses a more efficient algorithm to select independent sets.
 
 \bibliographystyle{elsart-num}
 \bibliography{paper}
