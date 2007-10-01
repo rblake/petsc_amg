@@ -395,15 +395,15 @@ selection criterion based on~(\ref{eqn:general-selection}), and weight
 update heuristics as described above select identical coarse grids.
 \end{thm}
 \begin{proof}
-Let $c$ be the vertices in the extended selection neighborhood of $i$
-($\mathcal{N}_i^{2s}$) satisfying the conditions for $D$ in some
-arbitrary iteration. Suppose assigning vertices $c_1 \subset c$ to the
-$C$-point set leads to $w_i > w_j$ for all $j \in
-\mathcal{N}_i^s$. Also suppose assigning $c_2 \subset c$, $c_1 \ne
-c_2$, to the $C$-point set leads to the existence of some $j \in
-\mathcal{N}_i^s$, $j \notin c$, such that $w_j > w_k$ for all $k \in
-\mathcal{N}_j^s$. In the first case, $i$ becomes a $C$-point before
-$j$, and the opposite is true in the second case.
+  Let $c$ be the vertices in the extended selection neighborhood of
+  $i$ (i.e., $\mathcal{N}_i^{2s}$) satisfying the conditions for $D$
+  in some arbitrary iteration, where $i \notin c$. Suppose assigning
+  vertices $c_1 \subset c$ to the $C$-point set leads to $w_i > w_j$
+  for all $j \in \mathcal{N}_i^s$. Additionally, suppose assigning
+  $c_2 \subset c$, $c_1 \ne c_2$, to the $C$-point set leads to $w_j >
+  w_k$ for all $k \in \mathcal{N}_j^s$ for some $j \in
+  \mathcal{N}_i^s$, $j \notin c$. In the first case, $i$ becomes a
+  $C$-point before $j$, and the opposite is true in the second case.
 
 For both conditions to be true, one or both of the following cases
 must be satisfied.
