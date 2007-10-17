@@ -9,6 +9,7 @@ extern "C" {
 
 #include <vector>
 #include <set>
+#include <map>
 
 void
 construct_amg_prolongation
@@ -180,6 +181,67 @@ build_strength_matrix(Mat A, PetscReal theta, Mat* strength) {
     //MatCreateMPIAIJWithArrays(PETSC_COMM_WORLD, end-start, end-start, PETSC_DETERMINE, PETSC_DETERMINE, &rows[0], &cols[0], &data[0], strength);
 }
 
+void
+describe_partition(Mat A, IS *part) {
+    PetscInt start;
+    PetscInt end;
+    MatGetOwnershipRange(A, &start, &end);
+    ISCreateStride(PETSC_COMM_WORLD, end-start, start, 1, part);
+}
+
+void
+describe_partition(Vec v, IS *part) {
+    PetscInt start;
+    PetscInt end;
+    VecGetOwnershipRange(v, &start, &end);
+    ISCreateStride(PETSC_COMM_WORLD, end-start, start, 1, part);
+}
+
+
+void
+find_influences
+/////////////////////////////////////////////////////////////
+/** 
+ */
+(
+ Mat graph,
+ //graph of non-zero structure
+ IS wanted,
+ //nodes we are interested in.  Contains different values on each processor.
+ IS *is_influences
+ //all the influences of the nodes we are interested in.
+ ) {
+    
+    //First, get all the matrix rows we are concerned with.
+    Mat *subgraph;
+    PetscInt ncols;
+    MatGetSize(graph, PETSC_NULL, &ncols);
+    IS all_columns;
+    ISCreateStride(PETSC_COMM_WORLD, ncols, 0, 1, &all_columns);
+    MatGetSubMatrices(graph, 1, &wanted, &all_columns, MAT_INITIAL_MATRIX, &subgraph);
+    ISDestroy(all_columns);
+
+    PetscInt n;
+    PetscInt *ia;
+    PetscInt *ja;
+    PetscTruth success = PETSC_FALSE;
+    MatGetRowIJ(*subgraph, 0, PETSC_FALSE, PETSC_FALSE, &n, &ia, &ja, &success);
+    assert(success == PETSC_TRUE);
+    std::set<PetscInt> influences;
+    for(int ii=ia[0]; ii<ia[n]; ii++) {
+	influences.insert(ja[ii]);
+    }
+    success = PETSC_TRUE;
+    MatRestoreRowIJ(*subgraph, 0, PETSC_FALSE, PETSC_FALSE, &n, &ia, &ja, &success);
+    MatDestroy(*subgraph);
+
+    std::vector<PetscInt> all_influences;
+    std::copy(influences.begin(), influences.end(), std::back_inserter(all_influences));
+    
+    ISCreateGeneral(PETSC_COMM_WORLD, all_influences.size(), &all_influences[0], is_influences);
+}
+
+
 /** Gets the graph structure in CSR format for the local rows of a global matrix
     It automatically allocates all the information it needs in construction and deallocates all
     the memory during deconstruction.  Yay RAII.
@@ -263,13 +325,33 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
     }
 
     //Prepare the scatters needed for the independent set algorithm.
-    Vec w_nonlocal;
-    PetscTable colmap;
-    VecScatter multscatter;
-    MatGetCommunicationStructs(neighbors, &w_nonlocal, &colmap, &multscatter);
-    PetscScalar *nonlocal_weights;
-    PetscInt nonlocal_size;
-    VecGetLocalSize(w_nonlocal, &nonlocal_size);
+    std::map<PetscInt, PetscInt> needed_map;
+    VecScatter needed_scatter;
+    Vec w_needed;
+    {
+	IS needed_nodes;
+	describe_partition(neighbors, &needed_nodes);
+	find_influences(neighbors, needed_nodes, &needed_nodes);
+
+	PetscInt local_size;
+	ISGetLocalSize(needed_nodes, &local_size);
+	VecCreateMPI(PETSC_COMM_WORLD, local_size, PETSC_DECIDE, &w_needed);
+	IS onto_index_set;
+	describe_partition(w_needed, &onto_index_set);
+	PetscInt begin;
+	PetscInt end;
+	VecGetOwnershipRange(w_needed, &begin, &end);
+	PetscInt *indicies;
+	ISGetIndices(needed_nodes, &indicies);
+	assert(local_size == end-begin);
+	for (int ii=0; ii<local_size; ii++) {
+	    needed_map[indicies[ii]] = ii;
+	}
+	ISRestoreIndices(needed_nodes, &indicies);
+	VecScatterCreate(w, needed_nodes, w_needed, onto_index_set, &needed_scatter);
+	ISDestroy(needed_nodes);
+	ISDestroy(onto_index_set);
+    }
 
     //we use MPI_INT here because we need to allreduce it with MPI_LAND 
     int all_points_partitioned=0;
@@ -284,11 +366,12 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 	   matrix.
 	*/
 	//get weights from neighbors
-	VecScatterBegin(multscatter, w, w_nonlocal, INSERT_VALUES, SCATTER_FORWARD);
-	VecScatterEnd(multscatter, w, w_nonlocal, INSERT_VALUES, SCATTER_FORWARD);
+	VecScatterBegin(needed_scatter, w, w_needed, INSERT_VALUES, SCATTER_FORWARD);
+	VecScatterEnd(needed_scatter, w, w_needed, INSERT_VALUES, SCATTER_FORWARD);
 	
+	PetscScalar *local_w_needed;
 	VecGetArray(w, &local_weights);
-	VecGetArray(w_nonlocal, &nonlocal_weights);
+	VecGetArray(w_needed, &local_w_needed);
 	FOREACH(iter, unknown) {
 	    //compare this node's weight to all of it's neighbors
 	    PetscScalar w_j = local_weights[*iter-start];
@@ -299,20 +382,7 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 		 ) {
 
 		PetscInt column = neighbors_raw.ja[col_index];
-		PetscScalar w_k;
-		if (start <= column && column < end) {
-		    w_k = local_weights[column-start];
-		} else {
-		    //for some strange reason, 0==invalid data in colmaps.
-		    //therefore, all data going into the colmap has to be shifted +1,
-		    //and all data leaving the colmap has to be shifted -1
-		    PetscInt nonlocal_index;
-		    PetscTableFind(colmap, column+1, &nonlocal_index); nonlocal_index--;
-		    assert(nonlocal_index != -1);
-		    assert(0 <= nonlocal_index);
-		    assert(nonlocal_index < nonlocal_size);
-		    w_k = nonlocal_weights[nonlocal_index];
-		}
+		PetscScalar w_k = local_w_needed[needed_map[column]];
 		if (w_j <= w_k) {
 		    bigger=false;
 		    break;
@@ -351,8 +421,38 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 	       However, in my case getting the list of weight updates
 	       across processor boundaries is difficult and tedious.
 	    */
-	    //if the point is local, update the array copy
-	    //if the point is non-local, use VecSetValue.
+	    // for each point P that influences c
+	    for (int col_index = influences_raw.ia[*iter-start];
+		 col_index < influences_raw.ia[*iter-start+1];
+		 col_index++
+		 ) {
+		PetscInt P = influences_raw.ja[col_index];
+		//decrement the measure.
+		if ((start <= j) && (j < end)) {
+		    //if the point is local, update the array copy
+		    local_weights[P-start]--;
+		} else {
+		    //if the point is non-local, use VecSetValue.
+		    VecSetValue(w, P, -1, ADD_VALUES);
+		}
+	    }
+	    // for each Q that depends on c
+	    for (int col_index = depends_on_raw.ia[*iter-start];
+		 col_index < depends_on_raw.ia[*iter-start+1];
+		 col_index++
+		 ) {
+		PetscInt Q = influences_raw.ja[col_index];
+		//decrement the measure
+		if ((start <= j) && (j < end)) {
+		    //if the point is local, update the array copy
+		    local_weights[Q-start]--;
+		} else {
+		    //if the point is non-local, use VecSetValue.
+		    VecSetValue(w, Q, -1, ADD_VALUES);
+		}
+		
+	    }    
+
 	    for (int col_index = neighbors_raw.ia[*iter-start];
 		 col_index < neighbors_raw.ia[*iter-start+1];
 		 col_index++
@@ -393,7 +493,9 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 	all_points_partitioned = true;
     }
 
-
+    VecDestroy(w_needed);
+    VecScatterDestroy(needed_scatter);
+    VecDestroy(w);
 
     //clean up the neighbors matrix
     MatDestroy(neighbors);
