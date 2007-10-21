@@ -197,6 +197,19 @@ describe_partition(Vec v, IS *part) {
     ISCreateStride(PETSC_COMM_WORLD, end-start, start, 1, part);
 }
 
+void
+get_matrix_rows(Mat A, IS rows, Mat *pA_rows) {
+    //First, get all the matrix rows we are concerned with.
+    PetscInt ncols;
+    MatGetSize(A, PETSC_NULL, &ncols);
+    IS all_columns;
+    Mat *pmat;
+    ISCreateStride(PETSC_COMM_WORLD, ncols, 0, 1, &all_columns);
+    MatGetSubMatrices(A, 1, &rows, &all_columns, MAT_INITIAL_MATRIX, &pmat);
+    ISDestroy(all_columns);
+    MatDuplicate(*pmat, MAT_COPY_VALUES, pA_rows);
+    MatDestroyMatrices(1, &pmat);
+}
 
 void
 find_influences
@@ -213,27 +226,23 @@ find_influences
  ) {
     
     //First, get all the matrix rows we are concerned with.
-    Mat *subgraph;
-    PetscInt ncols;
-    MatGetSize(graph, PETSC_NULL, &ncols);
-    IS all_columns;
-    ISCreateStride(PETSC_COMM_WORLD, ncols, 0, 1, &all_columns);
-    MatGetSubMatrices(graph, 1, &wanted, &all_columns, MAT_INITIAL_MATRIX, &subgraph);
-    ISDestroy(all_columns);
+    
+    Mat subgraph;
+    get_matrix_rows(graph, wanted, &subgraph);
 
     PetscInt n;
     PetscInt *ia;
     PetscInt *ja;
     PetscTruth success = PETSC_FALSE;
-    MatGetRowIJ(*subgraph, 0, PETSC_FALSE, PETSC_FALSE, &n, &ia, &ja, &success);
+    MatGetRowIJ(subgraph, 0, PETSC_FALSE, PETSC_FALSE, &n, &ia, &ja, &success);
     assert(success == PETSC_TRUE);
     std::set<PetscInt> influences;
     for(int ii=ia[0]; ii<ia[n]; ii++) {
 	influences.insert(ja[ii]);
     }
     success = PETSC_TRUE;
-    MatRestoreRowIJ(*subgraph, 0, PETSC_FALSE, PETSC_FALSE, &n, &ia, &ja, &success);
-    MatDestroy(*subgraph);
+    MatRestoreRowIJ(subgraph, 0, PETSC_FALSE, PETSC_FALSE, &n, &ia, &ja, &success);
+    MatDestroy(subgraph);
 
     std::vector<PetscInt> all_influences;
     std::copy(influences.begin(), influences.end(), std::back_inserter(all_influences));
@@ -285,6 +294,7 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
     VecZeroEntries(w);
 
     RawGraph influences_raw(influences);
+    RawGraph depends_raw(depends_on);
  
     //Get my local matrix size
     PetscInt start;
@@ -353,6 +363,35 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 	ISDestroy(onto_index_set);
     }
 
+    //Get portions of the dependency matrix that we will need.
+    std::map<PetscInt, PetscInt> extended_depend_map;
+    Mat extended_depend_mat;
+    PetscInt *extended_rowbound, *extended_col_index;
+    PetscInt extended_matrix_size;
+    {
+	IS extended_depend_nodes;
+	describe_partition(depends_on, &extended_depend_nodes);
+	find_influences(depends_on, extended_depend_nodes, &extended_depend_nodes);
+
+	get_matrix_rows(depends_on, extended_depend_nodes, &extended_depend_mat);
+	
+	PetscInt local_size;
+	ISGetLocalSize(extended_depend_nodes, &local_size);
+	PetscInt *indices;
+	ISGetIndices(extended_depend_nodes, &indices);
+	for (int ii=0; ii<local_size; ii++) {
+	    extended_depend_map[indices[ii]] = ii;
+	}
+	ISRestoreIndices(extended_depend_nodes, &indices);
+	ISDestroy(extended_depend_nodes);
+
+	PetscTruth done;
+	MatGetRowIJ(extended_depend_mat, 0, PETSC_FALSE, PETSC_FALSE, &extended_matrix_size, &extended_rowbound, &extended_col_index, &done);
+	assert(done==PETSC_TRUE);
+	assert(extended_matrix_size==local_size);
+    }
+    
+
     //we use MPI_INT here because we need to allreduce it with MPI_LAND 
     int all_points_partitioned=0;
     //while C U F != all points
@@ -396,16 +435,16 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 
 	FOREACH(iter, independent) {
 	    SHOWVAR(*iter, d);
+	    //add the point to the list of coarse points
+	    unknown.erase(*iter);
+	    coarse.push_back(*iter);
+	    local_weights[*iter-start] = 0;
 	}
 
-#if 0
 	////////////////////////////////////////////////////////
 
 	//for each item in the independent set
 	FOREACH(iter, independent) {
-	    //add the point to the list of coarse points
-	    unknown.erase(*iter);
-	    coarse.push_back(*iter);
 	    //update the weights
 	    /**
 	       Notice that I'm moving the check for fine points outside
@@ -428,7 +467,7 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 		 ) {
 		PetscInt P = influences_raw.ja[col_index];
 		//decrement the measure.
-		if ((start <= j) && (j < end)) {
+		if ((start <= P) && (P < end)) {
 		    //if the point is local, update the array copy
 		    local_weights[P-start]--;
 		} else {
@@ -437,30 +476,42 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 		}
 	    }
 	    // for each Q that depends on c
-	    for (int col_index = depends_on_raw.ia[*iter-start];
-		 col_index < depends_on_raw.ia[*iter-start+1];
-		 col_index++
+	    for (int Q_index = depends_raw.ia[*iter-start];
+		 Q_index < depends_raw.ia[*iter-start+1];
+		 Q_index++
 		 ) {
-		PetscInt Q = influences_raw.ja[col_index];
-		//decrement the measure
-		if ((start <= j) && (j < end)) {
-		    //if the point is local, update the array copy
-		    local_weights[Q-start]--;
-		} else {
-		    //if the point is non-local, use VecSetValue.
-		    VecSetValue(w, Q, -1, ADD_VALUES);
+		PetscInt Q = depends_raw.ja[Q_index];
+		//for each R that depends on Q
+		for (int R_index = extended_rowbound[extended_depend_map[Q]];
+		     R_index < extended_rowbound[extended_depend_map[Q]+1];
+		     R_index++
+		     ) {
+		    PetscInt R = extended_col_index[R_index];
+		    //if R depends on c, decrement the measure at Q.
+		    bool R_depends_on_c = false;
+		    for (int influence_index = influences_raw.ia[*iter-start];
+			 influence_index < influences_raw.ia[*iter-start+1];
+			 influence_index++
+			 ) {
+			PetscInt c_influence = influences_raw.ja[influence_index];
+			if (c_influence == R) {
+			    R_depends_on_c = true;
+			    break;
+			}
+		    }
+		    if (R_depends_on_c) {
+			if ((start <= Q) && (Q < end)) {
+			    //if the point is local, update the array copy
+			    local_weights[Q-start]--;
+			} else {
+			    //if the point is non-local, use VecSetValue.
+			    VecSetValue(w, Q, -1, ADD_VALUES);
+			}
+		    }
 		}
-		
-	    }    
-
-	    for (int col_index = neighbors_raw.ia[*iter-start];
-		 col_index < neighbors_raw.ia[*iter-start+1];
-		 col_index++
-		 ) {
-		PetscInt column = neighbors_raw.ja[col_index];
 	    }
 	}
-	VecRestoreArray(w_nonlocal, &nonlocal_weights);
+	VecRestoreArray(w_needed, &local_w_needed);
 	VecRestoreArray(w, &local_weights);
 	
 	//make sure any neighbor updates have propagated.
@@ -482,20 +533,28 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 	//cannot remove elements from unknown while we are iterating through it.
 	FOREACH(iter, new_fine_points) {
 	    unknown.erase(*iter);
+	    SHOWVAR((*iter), d);
 	}
-#endif
+
 	//finally, determine if we should run the loop again.
 	//if one processor has a non-empty unknown set, then
 	//we need to rerun the loop.
 	int my_points_partitioned = unknown.empty();
 	MPI_Allreduce(&my_points_partitioned, &all_points_partitioned, 1, MPI_INT, MPI_LAND, PETSC_COMM_WORLD);
-	SHOWVAR(all_points_partitioned, d);
-	all_points_partitioned = true;
+	//SHOWVAR(all_points_partitioned, d);
+	//all_points_partitioned = true;
     }
 
     VecDestroy(w_needed);
     VecScatterDestroy(needed_scatter);
     VecDestroy(w);
+
+    {
+	PetscTruth done;
+	MatRestoreRowIJ(extended_depend_mat, 0, PETSC_FALSE, PETSC_FALSE, 
+			&extended_matrix_size, &extended_rowbound, &extended_col_index, &done);
+    }
+    MatDestroy(extended_depend_mat);
 
     //clean up the neighbors matrix
     MatDestroy(neighbors);
