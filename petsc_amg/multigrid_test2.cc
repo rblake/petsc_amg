@@ -630,16 +630,15 @@ PetscErrorCode ComputeJacobian(UserContext *user, Mat *pA)
   PetscScalar    centerRho = user->rho;
   PetscErrorCode ierr;
   PetscInt       i,j,mx,my,xm,ym,xs,ys,num;
-  PetscScalar    v[5],Hx,Hy,HydHx,HxdHy,rho;
-  MatStencil     row, col[5];
+  PetscScalar    v[9],Hx,Hy,H,rho;
+  MatStencil     row, col[9];
 
   DAGetMatrix(da, MATMPIAIJ, pA);
 
   ierr = DAGetInfo(da,0,&mx,&my,0,0,0,0,0,0,0,0);CHKERRQ(ierr);  
   Hx    = 1.0 / (PetscReal)(mx-1);
   Hy    = 1.0 / (PetscReal)(my-1);
-  HxdHy = Hx/Hy;
-  HydHx = Hy/Hx;
+  H = Hx*Hy;
   ierr = DAGetCorners(da,&xs,&ys,0,&xm,&ym,0);CHKERRQ(ierr);
   for (j=ys; j<ys+ym; j++){
     for(i=xs; i<xs+xm; i++){
@@ -647,37 +646,57 @@ PetscErrorCode ComputeJacobian(UserContext *user, Mat *pA)
       ierr = ComputeRho(i, j, mx, my, centerRho, &rho);CHKERRQ(ierr);
       if (i==0 || j==0 || i==mx-1 || j==my-1) {
         if (user->bcType == DIRICHLET) {
-           v[0] = 2.0*rho*(HxdHy + HydHx);
+           v[0] = 8.0*rho*H;
           ierr = MatSetValuesStencil(*pA,1,&row,1,&row,v,INSERT_VALUES);CHKERRQ(ierr);
         } else if (user->bcType == NEUMANN) {
           num = 0;
           if (j!=0) {
-            v[num] = -rho*HxdHy;              col[num].i = i;   col[num].j = j-1;
+            v[num] = -rho*H;              col[num].i = i;   col[num].j = j-1;
             num++;
           }
           if (i!=0) {
-            v[num] = -rho*HydHx;              col[num].i = i-1; col[num].j = j;
+            v[num] = -rho*H;              col[num].i = i-1; col[num].j = j;
             num++;
           }
           if (i!=mx-1) {
-            v[num] = -rho*HydHx;              col[num].i = i+1; col[num].j = j;
+            v[num] = -rho*H;              col[num].i = i+1; col[num].j = j;
             num++;
           }
           if (j!=my-1) {
-            v[num] = -rho*HxdHy;              col[num].i = i;   col[num].j = j+1;
+            v[num] = -rho*H;              col[num].i = i;   col[num].j = j+1;
             num++;
           }
-          v[num]   = (num/2.0)*rho*(HxdHy + HydHx); col[num].i = i;   col[num].j = j;
+          if (j!=0 && i!=0) {
+            v[num] = -rho*H;              col[num].i = i-1; col[num].j = j-1;
+            num++;
+          }
+          if (j!=my-1 && i!=0) {
+            v[num] = -rho*H;              col[num].i = i-1; col[num].j = j+1;
+            num++;
+          }
+          if (j!=0 && i!=mx-1) {
+            v[num] = -rho*H;              col[num].i = i+1; col[num].j = j-1;
+            num++;
+          }
+          if (j!=my-1 && i!=mx-1) {
+            v[num] = -rho*H;              col[num].i = i+1; col[num].j = j+1;
+            num++;
+          }
+          v[num]   = (num)*rho*H; col[num].i = i;   col[num].j = j;
           num++;
           ierr = MatSetValuesStencil(*pA,1,&row,num,col,v,INSERT_VALUES);CHKERRQ(ierr);
         }
       } else {
-        v[0] = -rho*HxdHy;              col[0].i = i;   col[0].j = j-1;
-        v[1] = -rho*HydHx;              col[1].i = i-1; col[1].j = j;
-        v[2] = 2.0*rho*(HxdHy + HydHx); col[2].i = i;   col[2].j = j;
-        v[3] = -rho*HydHx;              col[3].i = i+1; col[3].j = j;
-        v[4] = -rho*HxdHy;              col[4].i = i;   col[4].j = j+1;
-        ierr = MatSetValuesStencil(*pA,1,&row,5,col,v,INSERT_VALUES);CHKERRQ(ierr);
+        v[0] = -rho*H;              col[0].i = i;   col[0].j = j-1;
+        v[1] = -rho*H;              col[1].i = i-1; col[1].j = j;
+        v[2] = 8.0*rho*H;           col[2].i = i;   col[2].j = j;
+        v[3] = -rho*H;              col[3].i = i+1; col[3].j = j;
+        v[4] = -rho*H;              col[4].i = i;   col[4].j = j+1;
+        v[5] = -rho*H;              col[5].i = i-1; col[5].j = j-1;
+        v[6] = -rho*H;              col[6].i = i-1; col[6].j = j+1;
+        v[7] = -rho*H;              col[7].i = i+1; col[7].j = j-1;
+        v[8] = -rho*H;              col[8].i = i+1; col[8].j = j+1;
+        ierr = MatSetValuesStencil(*pA,1,&row,9,col,v,INSERT_VALUES);CHKERRQ(ierr);
       }
     }
   }
@@ -695,7 +714,7 @@ main(int argc, char** argv) {
 
   PetscInitialize(&argc,&argv,(char *)0,PETSC_NULL);
 
-  ierr = DACreate2d(PETSC_COMM_WORLD,DA_NONPERIODIC,DA_STENCIL_STAR,-3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,0,0,&user.da);CHKERRQ(ierr);  
+  ierr = DACreate2d(PETSC_COMM_WORLD,DA_NONPERIODIC,DA_STENCIL_BOX,-3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,0,0,&user.da);CHKERRQ(ierr);  
 
   Vec b;
   ComputeRHS(&user, &b);
