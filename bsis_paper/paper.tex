@@ -73,16 +73,16 @@
 
 \begin{abstract}
 Independent set-based coarse-grid selection algorithms are defined by
-policies for how to do weight initialization, independent set
-selection, and weight update. In this paper, we develop theory
-demonstrating that all algorithms employing identical policies produce
-identical coarse grids, regardless of the implementation. This result
-on coarse grid invariance is applied to produce a new coarse-grid
-selection algorithm that is substantially more efficient than an
-existing algorithm using the same policies. Experimental results
-comparing two versions of the new algorithm and the older algorithm
-are presented, followed by a discussion on possible approaches to
-effectively parallelize the new methods.
+policies for weight initialization, independent set selection, and
+weight update. In this paper, we develop theory demonstrating that
+algorithms employing the same policies produce identical coarse grids,
+regardless of the implementation. This result on coarse grid
+invariance is applied to produce a new coarse-grid selection algorithm
+that is substantially more efficient than an existing algorithm using
+the same policies. Experimental results comparing two versions of the
+new algorithm and the older algorithm are presented, followed by a
+discussion on possible approaches to effectively parallelize the new
+method.
 \end{abstract}
 
 \begin{keyword}
@@ -107,7 +107,7 @@ system. The linear cost scaling property of AMG makes the method
 attractive, especially for large problems.
 
 AMG algorithms execute in two phases: the setup phase and the solve
-phase. Setup phase algorithms provide functionality for constructing
+phase. Setup phase algorithms provide functions for constructing
 elements needed by the solve phase, such as coarse grids, operators to
 transfer information between levels of the problem (i.e., restriction
 and prolongation operators), and the linear systems to be solved on
@@ -118,27 +118,40 @@ vectors between levels.
 
 In this paper, we focus attention on coarse-grid selection algorithms
 in the AMG setup phase. The independent set-based class of coarsening
-algorithms is studied in detail. In Section~\ref{sec:cgs}, we discuss
-current coarse-grid selection algorithms. The components of
-independent set-based coarsening algorithms are
-discussed. Section~\ref{sec:invariance} contains theory based on
-general independent set-based coarsening and the invariance of coarse
-grids selected when the same selection policies are
-used. Section~\ref{sec:bsis} introduces a new coarsening algorithm,
-Bucket-Sorted Independent Sets (BSIS), that, from the theory in
-Section~\ref{sec:invariance}, produces the same coarse grids as
-another coarsening algorithm in a much more efficient
+algorithms is studied in detail. New theory is developed to
+demonstrate invariance in the result of independent set-based coarse
+grid selection, given restrictions on the selection
+policies. Algorithms that fall within the assumptions of the theory
+are guaranteed to produce the same coarse grids, regardless of how the
+policies are implemented. A new coarse-grid selection algorithm,
+designed to select coarse grids more efficiently than the CLJP-c
+algorithm, is presented to demonstrate the theoretical results. A
+particularly attractive result of the theory is that computational
+efficiency concerns become decoupled from the output of coarse-grid
+selection.
+
+The remainder of this paper is organized as follows. In
+Section~\ref{sec:cgs}, we discuss contemporary coarse-grid selection
+algorithms. The components of independent set-based coarsening
+algorithms are presented. Section~\ref{sec:invariance} develops theory
+based on general independent set-based coarsening and the invariance
+of coarse grids selected when the same selection policies are
+used. Section~\ref{sec:bsis} demonstrates the results from
+Section~\ref{sec:invariance} through the introduction of a new
+coarsening algorithm called Bucket-Sorted Independent Sets
+(BSIS). BSIS produces the same coarse grids as the CLJP-c coarsening
+algorithm, but is designed to do so in a much more efficient
 manner. Experimental results are reported to demonstrate the
-performance gains in BSIS discussion is included to propose a method
-for parallelization of BSIS. Conclusions are presented in
+performance gains in BSIS, and discussion is included to propose a
+method for the parallelization of BSIS. Conclusions are presented in
 Section~\ref{sec:conclusions}.
 
 \section{Coarse-Grid Selection}
 \label{sec:cgs}
-Coarse-grid selection is the process of selecting the degrees of
-freedom for the coarse-level problem. Classical AMG uses nodal
-coarsening in which coarse-level degrees of freedom are a subset of
-the degrees of freedom on finer levels. Smoothed
+Coarse-grid selection algorithms construct the degrees of freedom for
+the coarse-level problems. Classical AMG implements nodal coarsening
+in which coarse-level degrees of freedom form a subset of the degrees
+of freedom on finer levels. Smoothed
 aggregation~\cite{Vanek1996,Vanek2001,brezina2005}, on the other hand,
 forms a coarse-level degree of freedom by aggregating several
 fine-level degrees of freedom. In this paper, we study nodal
@@ -147,13 +160,12 @@ coarsening.
 Given a set of fine-level degrees of freedom, $\Omega_k$, nodal
 coarse-grid selection constructs a set of coarse-level degrees of
 freedom $\Omega_{k+1} \subset \Omega_k$. Several approaches have been
-developed for selecting the coarse grid, with independent set-based
+developed to select the coarse grid, with independent set-based
 approaches being the most numerous. Independent set-based algorithms
-trace their roots to the classical AMG coarsening algorithm,
-Ruge-St\"uben (RS) coarsening~\cite{Ruge1987}, also called classical
-coarsening. These methods are our focus and are discussed in more
-detail following a brief overview of other techniques used for nodal
-coarsening.
+descend from the classical AMG coarsening algorithm, Ruge-St\"uben
+(RS) coarsening~\cite{Ruge1987}, also called classical
+coarsening. Independent set-based methods are our focus and are
+discussed in more detail in the next section.
 
 Other methods take substantially different approaches to
 coarsening. The technique in~\cite{Griebel2006} develops a parallel
@@ -167,60 +179,16 @@ offer another approach for parallel coarse-grid selection by
 decoupling coarse grids and alleviating the need for communication on
 coarse levels. Compatible relaxation
 approaches~\cite{Brandt2000,Livne2004,Brannick2005} form coarse grids
-incrementally and decide when the coarse grid is sufficient through a
-quality measure based on relaxation.
+incrementally and determine when the coarse grid is sufficient through
+a quality measure based on relaxation.
 
 \subsection{Independent Set-Based Selection}
 \label{sec:indep-set-based}
-Many independent set-based coarsening algorithms form $\Omega_{k+1}$
-using the following heuristics.
-\begin{description}
-\item[H1:] For each unknown $j$ that strongly influences $F$-point
-  $i$, $j$ is either a $C$-point or strongly depends on a $C$-point
-  $k$ that also strongly influences $i$.
-\item[H2:] The set of $C$-points needs to form a maximal independent
-  set in the reduced graph of $S$ such that no $C$-point strongly
-  depends on another $C$-point.
-\end{description}
-H1 and H2 cannot, in general, be satisfied simultaneously, so H1 is
-enforced by independent set-based methods, while H2 serves as a
-guideline whose purpose is to encourage selection of small
-coarse-grid point sets (i.e., small $|\Omega_{k+1}|$).
-
-Certain independent set-based coarsening algorithms use a variant of
-H1, called \hp, which is designed to lead to sparser coarse-level
-matrices.
-\begin{description}
-\item[\hp] Each $F$-point must be strongly influenced by at least one
-  $C$-point.
-\end{description}
-
-Independent set-based coarse-grid selection algorithms implement three
-routines to select coarse grids: initialization, independent set
-selection, and weight update. A general independent-set based
-coarsening algorithm is shown in
-Algorithm~\ref{alg:general-indep-set}.
-\begin{lstlisting}[caption={Independent Set-Based Coarse Grid
-Selection},label=alg:general-indep-set]
-%\textsc{Indep-Set-Coarse-Grid-Selection}$(\Omega)$:%
-$F \leftarrow \emptyset$
-$C \leftarrow \emptyset$
-$w \leftarrow\,$%\textsc{Initialize-Weights}$(\Omega)$%
-while $\Omega \ne \emptyset$
-   $D \leftarrow\,$%\textsc{Select-Indep-Set}$(w,\, \Omega)$%
-   $C \leftarrow C \cup D$
-   $F \leftarrow F \setminus D$
-   $(\Omega,\, w) \leftarrow\,$%\textsc{Update-Weights}$(D,\, \Omega,\, w)$%
-end
-\end{lstlisting}
-
-Each vertex in the graph is assigned a weight based on its merit to
-becoming a $C$-point. The largest weights are conferred to vertices
-best suited to be $C$-points, where the quality of potential
-$C$-points is quantified by \emph{strength of connection} measures. In
-the classical definition, the set of unknowns that unknown $i$
-strongly depends upon is based on the relative sizes of off-diagonal
-nonzeros in row $i$ of $A$ and is defined as
+Independent set-based coarsening algorithms rely on a \emph{strength
+  of connection} measure to estimate the level of correlation between
+  degrees of freedom. In the classical definition, the set of unknowns
+  that unknown $i$ strongly depends on is based on the relative sizes
+  of off-diagonal nonzeros in row $i$ of $A$ and is defined as
 \begin{equation}
 \label{2:eqn:S_i}
 S_i = \left\{j: i \ne j \textrm{ and }|a_{ij}| \ge \theta \max_{k \ne
@@ -248,7 +216,55 @@ strength of connection measures is an active area of
 research~\cite{Brannick2005} and has the potential to extend the
 applicability of AMG solvers.
 
-The selection of the independent set $D$ works by comparing weights in
+Many independent set-based coarsening algorithms use strong influence
+and strong dependence to form the set of coarse-grid points
+$\Omega_{k+1}$ using the following heuristics.
+\begin{description}
+\item[H1:] For each unknown $j$ that strongly influences $F$-point
+  $i$, $j$ is either a $C$-point or strongly depends on a $C$-point
+  $k$ that also strongly influences $i$.
+\item[H2:] The set of $C$-points should form a maximal independent set
+  in the reduced graph of $S$ such that no $C$-point strongly depends
+  on another $C$-point.
+\end{description}
+H1 and H2 cannot, in general, be satisfied simultaneously, so H1 is
+enforced by independent set-based methods, while H2 serves as a
+guideline whose purpose is to encourage selection of small
+coarse-grid point sets (i.e., small $|\Omega_{k+1}|$).
+
+Certain independent set-based coarsening algorithms use a variant of
+H1, called \hp, which is designed to produce sparser coarse-level
+matrices.
+\begin{description}
+\item[\hp] Each $F$-point must be strongly influenced by at least one
+  $C$-point.
+\end{description}
+
+Independent set-based coarse-grid selection algorithms implement three
+routines to select coarse grids: initialization, independent set
+selection, and weight update. A general independent-set based
+coarsening algorithm is outlined in
+Algorithm~\ref{alg:general-indep-set}.
+\begin{lstlisting}[caption={Independent Set-Based Coarse Grid
+Selection},label=alg:general-indep-set]
+%\textsc{Indep-Set-Coarse-Grid-Selection}$(\Omega)$:%
+$F \leftarrow \emptyset$
+$C \leftarrow \emptyset$
+$w \leftarrow\,$%\textsc{Initialize-Weights}$(\Omega)$%
+while $\Omega \ne \emptyset$
+   $D \leftarrow\,$%\textsc{Select-Indep-Set}$(w,\, \Omega)$%
+   $C \leftarrow C \cup D$
+   $(F,\, w) \leftarrow\,$%\textsc{Update-Weights}$(D,\, F,\, \Omega,\, w)$%
+end
+\end{lstlisting}
+
+Each vertex in the graph is assigned a weight based on its merit for
+becoming a $C$-point. The largest weights are conferred to vertices
+best suited to be $C$-points, where the quality of potential
+$C$-points is quantified by strength of connection measures.
+
+The selection of the independent set $D$ in Line~6 of
+Algorithm~\ref{alg:general-indep-set} works by comparing weights in
 each node's neighborhood, which is defined as follows.
 \begin{defn}
 \label{def:neighborhood}
@@ -271,10 +287,14 @@ condition is satisfied:
 \end{equation}
 
 The weight update routines in independent set-based coarsening
-algorithms are varied but take one of two forms: routines that
-decrease the values of weights and routines that increase the value of
-weights. In all cases, a vertex with a large weight has high fitness
-for becoming a $C$-point.
+algorithms (encapsulated in Line~8 of
+Algorithm~\ref{alg:general-indep-set}) are varied but take one of two
+forms: routines that decrease the values of weights and routines that
+increase the value of weights. In all cases, a vertex with a large
+weight has high fitness and is more desirable as a $C$-point. As the
+pseudocode is formatted in Algorithm~\ref{alg:general-indep-set},
+assignment of vertices to the $F$-point set occurs during the weight
+update routine.
 
 Many independent set-based coarsening algorithms have been
 developed. RS coarsening is introduced in~\cite{Ruge1987} and is the
@@ -296,11 +316,12 @@ its weight is larger than the weights of all vertices in its
 neighborhood.
 
 Algorithms relying on different and larger neighborhoods, such as
-\emph{distance-$d$ neighborhoods}, are conceivable.
+\emph{distance-$d$ neighborhoods}, are conceivable and are covered by
+the theory in this section.
 \begin{defn}
 The \emph{distance-$d$ neighborhood} of $i$, denoted
 $\mathcal{N}_i^d$, is the set of vertices within $d$ hops of $i$ in
-the symmetrized strength matrix, excluding $i$. That is,
+the symmetrized strength graph, excluding $i$. That is,
 $\mathcal{N}_i^d = \left[\bigcup_{j \in
 \mathcal{N}_i^{d-1}}\left(\mathcal{N}_j \cup \{j\}\right)\cup
 \mathcal{N}_i\right] \setminus \{i\}$, where $d > 0$ and
@@ -342,19 +363,19 @@ condition~(\ref{eqn:general-selection}), no other valid $C$-point
 assignments are able to affect $w_i$. This is formalized below.
 \begin{lem}
 \label{5:lemma:C-lock}
-If (\ref{eqn:general-selection}) is satisfied for vertex $i$, then
-$i$ must be the next vertex in $\{i\} \cup \mathcal{N}_i^s$ to become
-a $C$-point, regardless of any other selections and updates made in
-the graph.
+If (\ref{eqn:general-selection}) is satisfied for vertex $i$, then $i$
+must be the next vertex in $\{i\} \cup \mathcal{N}_i^s$ to become a
+$C$-point, regardless of other $C$-point selections and corresponding
+weight updates made in the graph.
 \end{lem}
 \begin{proof}
 The satisfaction of (\ref{eqn:general-selection}) means $w_i > w_j$
 for all $j \in \mathcal{N}_i^s$. For $i$ to not become a $C$-point,
 its weight must become smaller than some $j \in \mathcal{N}_i^s$. The
 weight of $i$, however, is not decremented unless some $j \in
-\mathcal{N}_i^s$ satisfies~(\ref{eqn:general-selection}) and becomes
-a $C$-point, which is impossible until after $i$ is assigned to the
-$C$-point set.
+\mathcal{N}_i^s$ satisfies~(\ref{eqn:general-selection}) and becomes a
+$C$-point, which is impossible until $i$ is assigned to the $C$-point
+set.
 \end{proof}
 
 To demonstrate all algorithms using the same selection neighborhood
@@ -363,8 +384,8 @@ inductive argument is presented below. The base case is provided by
 the first set of vertices satisfying the general selection conditions.
 
 Let $D_0$ be the set of all vertices satisfying
-(\ref{eqn:general-selection}) in the first iteration of coarse-grid
-selection. Vertices in $D_0$ become $C$-points regardless of the
+(\ref{eqn:general-selection}) following weight
+initialization. Vertices in $D_0$ become $C$-points regardless of the
 algorithm used to build coarse grids. In most independent set-based
 algorithms developed so far, all $D_0$ vertices become $C$-points in
 the first iteration. Any algorithm constructed, however, eventually
@@ -384,8 +405,10 @@ of a $D_0$ vertex.
 
 Lemma~\ref{5:lemma:D0_invariant} states that any coarse-grid selection
 method using the general selection condition invariably selects $D_0$
-vertices as $C$-points. This result is used in the proof of the next
-theorem.
+vertices as $C$-points. This result is used to prove, given the
+conditioned developed earlier in this section, the result of
+coarse-grid selection is insensitive to the implementation decisions
+made in specific algorithms.
 
 \begin{thm}
 \label{5:theorem:invariance}
@@ -396,14 +419,14 @@ update heuristics as described above select identical coarse grids.
 \end{thm}
 \begin{proof}
   Let $c$ be the vertices in the extended selection neighborhood of
-  $i$ (i.e., $\mathcal{N}_i^{2s}$) satisfying the conditions for $D$
-  in some arbitrary iteration, where $i \notin c$. Suppose assigning
-  vertices $c_1 \subset c$ to the $C$-point set leads to $w_i > w_j$
-  for all $j \in \mathcal{N}_i^s$. Additionally, suppose assigning
-  $c_2 \subset c$, $c_1 \ne c_2$, to the $C$-point set leads to $w_j >
-  w_k$ for all $k \in \mathcal{N}_j^s$ for some $j \in
+  $i$ (i.e., $ c \subset\mathcal{N}_i^{2s}$) satisfying the conditions
+  for $D$ in some arbitrary iteration. Suppose
+  assigning vertices $c_1 \subset c$ to the $C$-point set leads to
+  $w_i > w_j$ for all $j \in \mathcal{N}_i^s$. Additionally, suppose
+  assigning $c_2 \subset c$, $c_1 \ne c_2$, to the $C$-point set leads
+  to $w_j > w_k$ for all $k \in \mathcal{N}_j^s$ for some $j \in
   \mathcal{N}_i^s$, $j \notin c$. In the first case, $i$ becomes a
-  $C$-point before $j$, and the opposite is true in the second case.
+  $C$-point before $j$. The opposite is true in the second case.
 
 For both conditions to be true, one or both of the following cases
 must be satisfied.
@@ -433,9 +456,9 @@ condition.
 
 Both cases are impossible, so the order of $C$-point selection within
 the selection neighborhood of each vertex is invariant. Combined with
-Lemma~\ref{5:lemma:D0_invariant} as the base case, this proves by
-induction the invariance of coarse-grid selection for all algorithms
-using identical selection conditions.
+Lemma~\ref{5:lemma:D0_invariant} as the base case, induction proves
+the invariance of coarse-grid selection for all algorithms using
+identical selection and update conditions.
 \end{proof}
 
 Theorem~\ref{5:theorem:invariance} is an important result about the
@@ -444,19 +467,22 @@ algorithms. This information enables the design and implementation of
 new algorithms that yield identical coarse grids using different and
 possibly more efficient techniques.
 
-\section{Bucket-Sorted Independent Set Selection}
+\section{Bucket-Sorted Independent Sets Selection}
 \label{sec:bsis}
 In this section, we introduce Bucket-Sorted Independent Sets
-(BSIS). BSIS uses the same policies as CLJP-c, so from the theory in
+(BSIS). BSIS uses the same policies as the CLJP-c
+algorithm~\cite{alber-cljpc}, so from the theory in
 Section~\ref{sec:invariance}, BSIS and CLJP-c produce the same coarse
 grids. BSIS is designed to be more efficient than CLJP-c.
 
 \subsection{CLJP-c}
 CLJP-c~\cite{alber-cljpc} colors the graph of $S$ before selecting
-$C$-points, and the colors are used as one component of the vertex
-weights. As a result, the structure of the coarse grids selected is
-improved. More formally, the use of graph coloring provides the
-following important result.
+$C$-points, where the colors are used as one component of the vertex
+weights and the number of strong influences provides the other source
+of contribution. As a result, the structure of the coarse grids
+selected is improved over the CLJP algorithm~\cite{Cleary1998}. More
+formally, the use of graph coloring provides the following important
+result.
 \begin{thm}
 \label{5:theorem:CLJPc-neighbor-independence}
 For all pairs of vertices $i$ and $j \in \mathcal{N}_i$ CLJP-c
@@ -493,7 +519,7 @@ observation to a subset of vertices guaranteed to satisfy the
 selection criterion. In particular, it shows it is possible to build
 the coarse grid by selecting vertices with the maximum weight in the
 graph, updating weights, selecting the next set of vertices with
-maximum weight, and so on. This approach is taken by the BSIS
+maximum weight, and so on. This is the approach taken by the BSIS
 algorithm.
 
 CLJP and CLJP-c rely on a search routine to locate all vertices
@@ -543,9 +569,9 @@ search in constructing the coarse grid depends on the number of
 iterations needed. Even in the best case of $\Omega(E)$ time, the cost
 is significant when the graph contains large numbers of edges, as
 usually happens on the lower levels in the grid hierarchy
-(see~\cite{alber-PCGS} for examples). In the next section, a new
-technique is introduced for conducting the search in coarse-grid
-selection algorithms independent of the number of edges in the graph.
+(see~\cite{alber-PCGS} for examples). In Section~\ref{sec:bsis-alg},
+we introduce the technique used in BSIS, which conducts the search
+independent of the number of edges in the graph.
 
 Pseudo-code for the weight update in CLJP is shown in Algorithm~\ref{alg:setup}.
 \begin{lstlisting}[caption={CLJP Weight Update for CSR Matrix},label=alg:setup]
@@ -647,7 +673,7 @@ routines for search and weight update. Furthermore, rather than
 applying the color information to augment vertex weights, BSIS uses
 the colors in a bucket data structure. Once initialized, this data
 structure selects independent sets, which satisfy the conditions in
-(\ref{5:eqn:D-conditions}), in constant time.
+(\ref{eq:D-selection}), in constant time.
 
 Figure~\ref{5:fig:bucket-algorithm} illustrates the bucket data
 structure. The number of buckets in the data structure is $\max_{i \in
@@ -673,7 +699,7 @@ complete. Algorithms~\ref{5:alg:BSIS-setup},
 outline the operations discussed above.
 \begin{lstlisting}[caption={BSIS Data Structure Setup},label=5:alg:BSIS-setup]
 %\textsc{BSIS-Setup}$(S)$%
-for $i \in V$
+for $i \in S$
   $bucketID \leftarrow (w_i-1)\cdot numColors + color_i$
   $bucket[bucketID].\textsc{Insert}(i)$
 end
@@ -734,7 +760,7 @@ structure following the first iteration of the algorithm. Vertex~10
 has become a $C$-point and its neighbors' weights have been
 updated. Vertices assigned to $F$ or $C$ are removed from the data
 structure and other affected vertices are moved to new locations in
-the data structure. Such vertices are highlighted in red.
+the data structure. Such vertices are highlighted with a red ring.
 \begin{figure}
   \begin{center}
     \includegraphics[width=0.98\textwidth]{images/BSIS/cp1}
@@ -821,14 +847,14 @@ problem is the 3D 7-point Laplacian on a structured grid:
 Timing data for the selection of all coarse grids in the hierarchy is
 reported. This time includes the cost for all parts of the algorithms,
 including the graph coloring phase. AMG solve phase information is not
-reported since the algorithms produce identical coarse grids and since
+reported since the algorithms produce identical coarse grids and
 information on solve phase performance for AMG with CLJP-c is
 documented in~\cite{alber-cljpc,alber-PCGS}.
 
 The smallest problem is a $30 \times 30 \times 30$ grid. Subsequent
-problems are grids of size $60^3$, $90^3$, up to $210^3$. The largest
-problem is 343 times larger than the smallest problem and contains
-more than nine million degrees of freedom.
+problems are grids of size $60^3$, $90^3$, and so on, up to
+$210^3$. The largest problem is 343 times larger than the smallest
+problem and contains more than nine million degrees of freedom.
 
 Results for the experiment are presented in
 Figure~\ref{5:fig:results-full}.
@@ -933,7 +959,7 @@ a processor (and, thus, decrease communication costs). If the number
 of vertices per processor per level is maintained at a high enough
 level, BSIS is still valuable on coarse grids. A third option is to
 replicate the operator matrix on processors, which leads to processors
-doing more of the same work, but by avoiding communication. The second
+doing some identical work, but by avoiding communication. The second
 and third ideas are similar in nature and both involve using dynamic
 load balancing
 techniques~\cite{DevineBomanKarypisPP04,CybDLB,deCoughnyLB,SchloegelLB,ZoltanParHyp06ipdps,ZoltanParHypRepart07}.
@@ -945,12 +971,14 @@ theoretical results were presented expanding knowledge on the nature
 of independent-set based coarse-grid selection. Algorithms using the
 same rules, with some restrictions, for weight initialization,
 independent set selection, and weight update produce the same coarse
-grids, regardless of the particular implementation of the
-rules. This result decouples the design of policies for selecting
-quality coarse grids from the design and efficiency of the algorithms
-used to select the coarse grids. The BSIS algorithm is designed as an
-example of this. BSIS selects the same coarse grids as CLJP-c, but
-uses a more efficient algorithm to select independent sets.
+grids, regardless of the particular implementation of the rules. This
+result decouples the design of policies for selecting quality coarse
+grids from the design and efficiency of the algorithms used to select
+the coarse grids. Our second contribution demonstrates the power of
+the theoretical results with a new coarsening algorithm called
+BSIS. The BSIS algorithm is designed as an example of this. BSIS
+selects the same coarse grids as CLJP-c, but uses a more efficient
+algorithm to select independent sets.
 
 \bibliographystyle{elsart-num}
 \bibliography{paper}
