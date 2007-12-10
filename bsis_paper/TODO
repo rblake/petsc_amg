@@ -2,13 +2,9 @@
   we need to mess with the figures to get them to print well in black
   and white.
 
-* Discuss coarse grid selection problem as being graph problem with
-  graph from A.
-* Mention that when vertices are added to C or F set, they are removed
-  from graph.
-
 * Not too thrilled with the way the comments in the algorithms
   look. The environment being used to generate the algorithms seems to
   conflict with "latex philosophy" in that formatting of the algorithm
   is explicitly affected by how spaces are inserted into the document
-  source code.
+  source code. Find out if this algorithm environment has explicit method
+  for comments because the pseudocode comments currently look very bad.
