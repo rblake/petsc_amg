@@ -11,7 +11,8 @@
 % or use the epsfig package if you prefer to use the old commands
 % \usepackage{epsfig}
 
-\usepackage{amssymb,listings}
+\usepackage{amssymb,listings,color}
+\definecolor{mygray}{gray}{0.6}
 
 %% THE ENVIRONMENT \begin{proof} ... \end{proof} PRODUCES AN
 %% END-OF-PROOF SIGN.
@@ -37,6 +38,7 @@
         xleftmargin=5mm,
         framexleftmargin=5mm,
         language=Matlab,
+        morecomment=[n][\itshape\color{mygray}]{/*}{*/},
         belowcaptionskip=5pt}
 \renewcommand{\lstlistingname}{Algorithm}
 \usepackage{caption}
@@ -71,18 +73,15 @@
 % \author[label1,label2]{}
 % \address[label2]{}
 
-\begin{abstract}
-Independent set-based coarse-grid selection algorithms are defined by
-policies for weight initialization, independent set selection, and
-weight update. In this paper, we develop theory demonstrating that
-algorithms employing the same policies produce identical coarse grids,
-regardless of the implementation. This result on coarse grid
-invariance is applied to produce a new coarse-grid selection algorithm
-that is substantially more efficient than an existing algorithm using
-the same policies. Experimental results comparing two versions of the
-new algorithm and the older algorithm are presented, followed by a
-discussion on possible approaches to effectively parallelize the new
-method.
+\begin{abstract} Independent set-based coarse-grid selection algorithms for
+algebraic multigrid are defined by their policies for weight initialization,
+independent set selection, and weight update. In this paper, we develop theory
+demonstrating that algorithms employing the same policies produce identical
+coarse grids, regardless of the implementation. The coarse grid invariance
+motivates a new coarse-grid selection algorithm that is more efficient than an
+existing algorithm using the same policies. Experimental results highlighting
+the efficiency of two versions of the new algorithm are presented, followed by a
+discussion on possible approaches to effectively parallelize the new method.
 \end{abstract}
 
 \begin{keyword}
@@ -98,13 +97,13 @@ multigrid \sep parallel algorithms
 \section{Introduction}
 \label{sec:intro}
 The algebraic multigrid (AMG) method~\cite{Ruge1987,Brandt1982} is an
-efficient numerical algorithm for finding the solution to numerous
-problems, including linear systems of the form $Ax = b$ arising from
+efficient numerical algorithm for finding the solution to
+linear systems of the form $Ax = b$.  Often, these algebraic systems arise from
 the discretization of partial differential equations on structured and
 unstructured meshes. In many cases, the computational complexity of
 AMG is $O(n)$, where $n$ is the number of unknowns in the linear
-system. The linear cost scaling property of AMG makes the method
-attractive, especially for large problems.
+system. The linear cost property of AMG makes the method particularly
+attractive for large scale problems.
 
 AMG algorithms execute in two phases: the setup phase and the solve
 phase. Setup phase algorithms provide functions for constructing
@@ -126,9 +125,8 @@ are guaranteed to produce the same coarse grids, regardless of how the
 policies are implemented. A new coarse-grid selection algorithm,
 designed to select coarse grids more efficiently than the CLJP-c
 algorithm, is presented to demonstrate the theoretical results. A
-particularly attractive result of the theory is that computational
-efficiency concerns become decoupled from the output of coarse-grid
-selection.
+particularly attractive result of the theory is that output from coarse-grid
+selection may be considered independent of the computational efficiency.
 
 The remainder of this paper is organized as follows. In
 Section~\ref{sec:cgs}, we discuss contemporary coarse-grid selection
@@ -140,7 +138,7 @@ used. Section~\ref{sec:bsis} demonstrates the results from
 Section~\ref{sec:invariance} through the introduction of a new
 coarsening algorithm called Bucket-Sorted Independent Sets
 (BSIS). BSIS produces the same coarse grids as the CLJP-c coarsening
-algorithm, but is designed to do so in a much more efficient
+algorithm, but is designed to do so in a more efficient
 manner. Experimental results are reported to demonstrate the
 performance gains in BSIS, and discussion is included to propose a
 method for the parallelization of BSIS. Conclusions are presented in
@@ -164,7 +162,7 @@ developed to select the coarse grid, with independent set-based
 approaches being the most numerous. Independent set-based algorithms
 descend from the classical AMG coarsening algorithm, Ruge-St\"uben
 (RS) coarsening~\cite{Ruge1987}, also called classical
-coarsening. Independent set-based methods are our focus and are
+coarsening. Independent set-based methods are the focus of this paper and are
 discussed in more detail in the next section.
 
 Other methods take substantially different approaches to
@@ -258,8 +256,8 @@ while $\Omega \ne \emptyset$
 end
 \end{lstlisting}
 
-Each vertex in the graph is assigned a weight based on its merit for
-becoming a $C$-point. The largest weights are conferred to vertices
+Each vertex in the graph is assigned a weight based on its merit in
+becoming a $C$-point. The largest weights are associated with vertices
 best suited to be $C$-points, where the quality of potential
 $C$-points is quantified by strength of connection measures.
 
@@ -287,13 +285,13 @@ condition is satisfied:
 \end{equation}
 
 The weight update routines in independent set-based coarsening
-algorithms (encapsulated in Line~8 of
-Algorithm~\ref{alg:general-indep-set}) are varied but take one of two
+algorithms (cf. Line~8 of
+Algorithm~\ref{alg:general-indep-set}) vary, but take one of two
 forms: routines that decrease the values of weights and routines that
 increase the value of weights. In all cases, a vertex with a large
-weight has high fitness and is more desirable as a $C$-point. As the
-pseudocode is formatted in Algorithm~\ref{alg:general-indep-set},
-assignment of vertices to the $F$-point set occurs during the weight
+weight has high fitness and is more desirable as a $C$-point. The
+pseudocode as written in Algorithm~\ref{alg:general-indep-set} performs
+assignment of vertices to the $F$-point set during the weight
 update routine.
 
 Many independent set-based coarsening algorithms have been
@@ -346,7 +344,7 @@ following weight updates and is unaffected by the assignment of a
 vertex $j \notin \mathcal{N}_i^s$ to the $C$-point set.
 
 Given a symmetric, but otherwise arbitrary, set of selection
-neighborhoods, the set of vertices potentially able to affect the
+neighborhoods, the set of vertices affecting the
 vertex weight of $i$ or $j \in \mathcal{N}_i^s$ is the \emph{extended
 selection neighborhood}.
 \begin{defn}
@@ -364,7 +362,7 @@ assignments are able to affect $w_i$. This is formalized below.
 \begin{lem}
 \label{5:lemma:C-lock}
 If (\ref{eqn:general-selection}) is satisfied for vertex $i$, then $i$
-must be the next vertex in $\{i\} \cup \mathcal{N}_i^s$ to become a
+is the next vertex in $\{i\} \cup \mathcal{N}_i^s$ to become a
 $C$-point, regardless of other $C$-point selections and corresponding
 weight updates made in the graph.
 \end{lem}
@@ -406,7 +404,7 @@ of a $D_0$ vertex.
 Lemma~\ref{5:lemma:D0_invariant} states that any coarse-grid selection
 method using the general selection condition invariably selects $D_0$
 vertices as $C$-points. This result is used to prove, given the
-conditioned developed earlier in this section, the result of
+conditioned developed earlier in this section, that of
 coarse-grid selection is insensitive to the implementation decisions
 made in specific algorithms.
 
@@ -579,7 +577,7 @@ Pseudo-code for the weight update in CLJP is shown in Algorithm~\ref{alg:setup}.
 for $d \in D$
   for $i \in S_d$
     $w_i \leftarrow w_i - 1$
-    $S_d = S_d \setminus \{i\}$ //removing edge from graph
+    $S_d = S_d \setminus \{i\}$ /*removing edge from graph*/
   end
 end
 for $i \notin (C \cup F)$
@@ -591,9 +589,10 @@ for $i \notin (C \cup F)$
   for $j \in S_i$
     if $j \notin D$
       for $k \in S_j$
-        if $k$ is marked NEW-C-POINT      // $i$ and $j$ mutually influenced by $k$
+        /* $i$ and $j$ mutually influenced by $k$ */
+        if $k$ is marked NEW-C-POINT      
           $w_j \leftarrow w_j - 1$
-          $S_i = S_i \setminus \{j\}$     // remove edge from $j$ to $i$
+          $S_i = S_i \setminus \{j\}$     /*remove edge from $j$ to $i$*/
         end
       end
     end
@@ -601,7 +600,7 @@ for $i \notin (C \cup F)$
   for $k$ originally in $S_i$
     if $k \in D$
       unmark $k$
-      $S_i = S_i \setminus \{k\}$         // remove edge from $k$ to $i$, if present
+      $S_i = S_i \setminus \{k\}$         /*remove edge from $k$ to $i$, if present*/
     end
   end
 end
