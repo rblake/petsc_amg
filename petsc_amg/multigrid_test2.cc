@@ -11,6 +11,18 @@ extern "C" {
 #include <set>
 #include <map>
 
+
+
+const char     *bcTypes[2] = {"dirichlet","neumann"};
+typedef enum {DIRICHLET, NEUMANN} BCType;
+typedef struct {
+    PetscScalar   rho;
+    PetscScalar   nu;
+    BCType        bcType;
+    DA da;
+} UserContext;
+
+
 void
 construct_amg_prolongation
 (
@@ -203,12 +215,9 @@ get_matrix_rows(Mat A, IS rows, Mat *pA_rows) {
     PetscInt ncols;
     MatGetSize(A, PETSC_NULL, &ncols);
     IS all_columns;
-    Mat *pmat;
     ISCreateStride(PETSC_COMM_WORLD, ncols, 0, 1, &all_columns);
-    MatGetSubMatrices(A, 1, &rows, &all_columns, MAT_INITIAL_MATRIX, &pmat);
+    MatGetSubMatrix(A, rows, all_columns, PETSC_DECIDE, MAT_INITIAL_MATRIX, pA_rows);
     ISDestroy(all_columns);
-    MatDuplicate(*pmat, MAT_COPY_VALUES, pA_rows);
-    MatDestroyMatrices(1, &pmat);
 }
 
 void
@@ -227,8 +236,12 @@ find_influences
     
     //First, get all the matrix rows we are concerned with.
     
+    Mat subgraph_global;
+    get_matrix_rows(graph, wanted, &subgraph_global);
+    
     Mat subgraph;
-    get_matrix_rows(graph, wanted, &subgraph);
+    MatGetLocalMat(subgraph_global, MAT_INITIAL_MATRIX, &subgraph);
+    MatDestroy(subgraph_global);
 
     PetscInt n;
     PetscInt *ia;
@@ -258,7 +271,10 @@ find_influences
 struct RawGraph {
     PetscInt *ia;
     PetscInt *ja;
+    PetscScalar *data;
     PetscInt local_nrows;
+    PetscInt row_begin;
+    PetscInt row_end;
     Mat global_mat;
     Mat local_mat;
 
@@ -266,136 +282,445 @@ struct RawGraph {
 	global_mat = new_global_mat;
 	//For this code to work, we're going to need the matrix structure for the sequential portion of this matrix.
 	//Therefore, extract a sequential AIJ matrix.
-	MatGetLocalMat(global_mat, MAT_INITIAL_MATRIX, &local_mat);
+	MatType type;
+	MatGetType(global_mat, &type);
+	if (!strcmp(type,MATSEQAIJ)) {
+	    MatDuplicate(global_mat, MAT_DO_NOT_COPY_VALUES, &local_mat);
+	} else {
+	    MatGetLocalMat(global_mat, MAT_INITIAL_MATRIX, &local_mat);
+	}
+	MatZeroEntries(local_mat);
+	MatGetOwnershipRange(global_mat, &row_begin, &row_end);
 	//MatView(local_mat, PETSC_VIEWER_DRAW_SELF);
 
 	PetscTruth done = PETSC_FALSE;
 	MatGetRowIJ(local_mat, 0, PETSC_FALSE, PETSC_FALSE, &local_nrows, &ia, &ja, &done);
 	assert(done == PETSC_TRUE || "Unexpected error: can't get csr structure from matrix");
+	MatGetArray(local_mat, &data);
     }
     
     ~RawGraph() {
 	//clean up the local array structures I allocated.
+	MatRestoreArray(local_mat, &data);
 	PetscTruth done = PETSC_FALSE;
 	MatRestoreRowIJ(local_mat, 0, PETSC_FALSE, PETSC_FALSE, &local_nrows, &ia, &ja, &done);
 	assert(done == PETSC_TRUE || "Unexpected error: can't return csr structure to matrix");
 	MatDestroy(local_mat);
     }
+
+    PetscInt
+    nnz_in_row(PetscInt row) {
+	return ia[row-row_begin+1]-ia[row-row_begin];
+    }
+
+    PetscInt*
+    row_pointer(PetscInt row) {
+	return &(ja[ia[row-row_begin]]);
+    }
+
+    PetscInt
+    col(PetscInt row, PetscInt row_index) {
+	return row_pointer(row)[row_index];
+    }
+
+    void
+    mark(PetscInt row, PetscInt row_index) {
+	data[ ia[row-row_begin]+row_index ] = 1;
+    }
+    
+    bool
+    is_marked(PetscInt row, PetscInt row_index) {
+	return (data[ ia[row-row_begin]+row_index ] == 1);
+    }
+	
 };
 
-#define FOREACH(iter, coll) for(typeof(unknown.begin()) iter=(coll).begin(); iter!=(coll).end(); ++iter)
+struct RawVector {
+    PetscInt begin;
+    PetscInt end;
+    PetscScalar* data;
+    Vec vec;
+    
+    RawVector(Vec new_vec) {
+	vec = new_vec;
+	VecGetOwnershipRange(vec, &begin, &end);
+	VecGetArray(vec, &data);
+    }
+
+    ~RawVector() {
+	VecRestoreArray(vec, &data);
+    }
+
+    PetscScalar& at(PetscInt index) { return data[index-begin]; } 
+
+};
+
+template <typename T>
+bool
+is_member(T& element, std::set<T>& Set) {
+    return (Set.find(element) != Set.end());
+}
+
+#define FOREACH(iter, coll) for(typeof((coll).begin()) iter=(coll).begin(); iter!=(coll).end(); ++iter)
 
 void
-cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
+cljp_coarsening(Mat depends_on, IS *pCoarse, UserContext* user) {
         
     //create a vector of the weights.
     Vec w;
-    MatGetVecs(influences, PETSC_NULL, &w);
+    MatGetVecs(depends_on, PETSC_NULL, &w);
     VecZeroEntries(w);
-
-    RawGraph influences_raw(influences);
-    RawGraph depends_raw(depends_on);
  
     //Get my local matrix size
     PetscInt start;
     PetscInt end;
-    MatGetOwnershipRange(influences, &start, &end);
-    assert(influences_raw.local_nrows == end-start);
+    MatGetOwnershipRange(depends_on, &start, &end);
 
-    //Initialize the weight vector with \norm{S^T_i} + \sigma(i)
-    PetscScalar *local_weights;
-    VecGetArray(w, &local_weights);
-    for (int local_row=0; local_row < influences_raw.local_nrows; local_row++) {
-	local_weights[local_row] = 
-	    influences_raw.ia[local_row+1]-influences_raw.ia[local_row] + frand();
+    //TODO: replace with something that doesn't require re-creating the matrix structure.
+    //Initialize all the weights
+    {
+	Mat influences;
+	MatTranspose(depends_on, &influences);
+	{
+	    RawGraph influences_raw(influences);
+	    assert(influences_raw.local_nrows == end-start);
+	    //Initialize the weight vector with \norm{S^T_i} + \sigma(i)
+	    PetscScalar *local_weights;
+	    VecGetArray(w, &local_weights);
+	    for (int local_row=0; local_row < influences_raw.local_nrows; local_row++) {
+		local_weights[local_row] = 
+		    influences_raw.ia[local_row+1]-influences_raw.ia[local_row] + frand();
+	    }
+	    VecRestoreArray(w, &local_weights);
+	}
+	MatDestroy(influences);
     }
-    VecRestoreArray(w, &local_weights);
+    //VecView(w, PETSC_VIEWER_STDOUT_WORLD);
 
-    VecView(w, PETSC_VIEWER_DRAW_WORLD);
+    //--------------------------------------------------------------
 
-    //Next, we need to create a matrix that represents all the neighbors of
-    //a given node.
-    Mat neighbors;
-    //TODO: I need to get rid of the values on all these matricies.
-    //This should be MAT_DO_NOT_COPY_VALUES
-    MatDuplicate(influences, MAT_COPY_VALUES, &neighbors);
-    MatAXPY(neighbors, 1, depends_on, DIFFERENT_NONZERO_PATTERN);
-    //MatView(neighbors, PETSC_VIEWER_DRAW_WORLD);
+    //Prepare the scatters needed for the independent set algorithm.
+    std::map<PetscInt, PetscInt> nonlocal_map;
+    VecScatter nonlocal_scatter;
+    Vec w_nonlocal;
+    Mat extended_depend_mat;
+    {
+	IS nonlocal_nodes;
+	describe_partition(depends_on, &nonlocal_nodes);
+	find_influences(depends_on, nonlocal_nodes, &nonlocal_nodes);
 
-    RawGraph neighbors_raw(neighbors);
-    
+	PetscInt local_size;
+	ISGetLocalSize(nonlocal_nodes, &local_size);
+	VecCreateMPI(PETSC_COMM_WORLD, local_size, PETSC_DECIDE, &w_nonlocal);
+	IS onto_index_set;
+	describe_partition(w_nonlocal, &onto_index_set);
+	PetscInt begin;
+	PetscInt end;
+	VecGetOwnershipRange(w_nonlocal, &begin, &end);
+	PetscInt *indicies;
+	ISGetIndices(nonlocal_nodes, &indicies);
+	assert(local_size == end-begin);
+	for (int ii=0; ii<local_size; ii++) {
+	    nonlocal_map[indicies[ii]] = ii+begin;
+	}
+	ISRestoreIndices(nonlocal_nodes, &indicies);
+	VecScatterCreate(w, nonlocal_nodes, w_nonlocal, onto_index_set, &nonlocal_scatter);
+
+
+	//while we are here, get the matrix + graph nodes that we need.
+	get_matrix_rows(depends_on, nonlocal_nodes, &extended_depend_mat);
+
+	ISDestroy(nonlocal_nodes);
+	ISDestroy(onto_index_set);
+    }
+
+    // Vec used only for display purposes
+    enum NodeType {UNKNOWN=-1, FINE, COARSE};
+    Vec node_type;
+    VecDuplicate(w, &node_type);
+    VecSet(node_type, UNKNOWN);
+    Vec node_type_nonlocal;
+    VecDuplicate(w_nonlocal, &node_type_nonlocal);
+    VecSet(node_type_nonlocal, UNKNOWN);
+
+    Vec is_not_independent;
+    VecDuplicate(w, &is_not_independent);    
+    Vec is_not_independent_nonlocal;
+    VecDuplicate(w_nonlocal, &is_not_independent_nonlocal);
+    VecScatterBegin(nonlocal_scatter, w, w_nonlocal, INSERT_VALUES, SCATTER_FORWARD);
+    VecScatterEnd(nonlocal_scatter, w, w_nonlocal, INSERT_VALUES, SCATTER_FORWARD);
+
+    Vec w_update_nonlocal;
+    VecDuplicate(w_nonlocal, &w_update_nonlocal);
+
     //get ready to find all the coarse and fine points
-    std::vector<PetscInt> coarse;
-    std::vector<PetscInt> fine;
     typedef std::set<PetscInt> IntSet;
     IntSet unknown;
     //initialize the unknown set with all points that are local to this processor.
     for (int ii=start; ii<end; ii++) { 
 	unknown.insert(ii); 
-    }
-
-    //Prepare the scatters needed for the independent set algorithm.
-    std::map<PetscInt, PetscInt> needed_map;
-    VecScatter needed_scatter;
-    Vec w_needed;
-    {
-	IS needed_nodes;
-	describe_partition(neighbors, &needed_nodes);
-	find_influences(neighbors, needed_nodes, &needed_nodes);
-
-	PetscInt local_size;
-	ISGetLocalSize(needed_nodes, &local_size);
-	VecCreateMPI(PETSC_COMM_WORLD, local_size, PETSC_DECIDE, &w_needed);
-	IS onto_index_set;
-	describe_partition(w_needed, &onto_index_set);
-	PetscInt begin;
-	PetscInt end;
-	VecGetOwnershipRange(w_needed, &begin, &end);
-	PetscInt *indicies;
-	ISGetIndices(needed_nodes, &indicies);
-	assert(local_size == end-begin);
-	for (int ii=0; ii<local_size; ii++) {
-	    needed_map[indicies[ii]] = ii;
-	}
-	ISRestoreIndices(needed_nodes, &indicies);
-	VecScatterCreate(w, needed_nodes, w_needed, onto_index_set, &needed_scatter);
-	ISDestroy(needed_nodes);
-	ISDestroy(onto_index_set);
-    }
-
-    //Get portions of the dependency matrix that we will need.
-    std::map<PetscInt, PetscInt> extended_depend_map;
-    Mat extended_depend_mat;
-    PetscInt *extended_rowbound, *extended_col_index;
-    PetscInt extended_matrix_size;
-    {
-	IS extended_depend_nodes;
-	describe_partition(depends_on, &extended_depend_nodes);
-	find_influences(depends_on, extended_depend_nodes, &extended_depend_nodes);
-
-	get_matrix_rows(depends_on, extended_depend_nodes, &extended_depend_mat);
-	
-	PetscInt local_size;
-	ISGetLocalSize(extended_depend_nodes, &local_size);
-	PetscInt *indices;
-	ISGetIndices(extended_depend_nodes, &indices);
-	for (int ii=0; ii<local_size; ii++) {
-	    extended_depend_map[indices[ii]] = ii;
-	}
-	ISRestoreIndices(extended_depend_nodes, &indices);
-	ISDestroy(extended_depend_nodes);
-
-	PetscTruth done;
-	MatGetRowIJ(extended_depend_mat, 0, PETSC_FALSE, PETSC_FALSE, &extended_matrix_size, &extended_rowbound, &extended_col_index, &done);
-	assert(done==PETSC_TRUE);
-	assert(extended_matrix_size==local_size);
-    }
-    
+    }    
 
     //we use MPI_INT here because we need to allreduce it with MPI_LAND 
     int all_points_partitioned=0;
-    //while C U F != all points
-    while(!all_points_partitioned) {
+    int inc = 0;
+    
+    {
+	RawGraph dep_nonlocal_raw(extended_depend_mat);
+
+	//while not done
+	while(!all_points_partitioned) {
+	    //Start: non-local weights, non-local coarse points
+
+	    LTRACE();
+	    {
+		char fname[] = "weightsXXX";
+		char selection_graph[] = "selectionXXX";
+		sprintf(fname, "weights%03d", inc);
+		sprintf(selection_graph, "selection%03d", inc);
+		inc++;
+	    
+		PetscViewer view;
+		PetscViewerBinaryMatlabOpen(PETSC_COMM_WORLD, fname, &view);
+		PetscViewerBinaryMatlabOutputVecDA(view, "z", w, user->da);
+		PetscViewerBinaryMatlabDestroy(view);
+	    
+		PetscViewerBinaryMatlabOpen(PETSC_COMM_WORLD, selection_graph, &view);
+		PetscViewerBinaryMatlabOutputVecDA(view, "z", node_type, user->da);
+		PetscViewerBinaryMatlabDestroy(view);
+	    }
+
+
+	    //Pre: non-local weights, non-local coarse points
+	    //find the independent set.
+
+	    //By using ADD_VALUES in a scattter, we can perform 
+	    //a boolean OR across procesors.
+
+	    //is_not_independent[*] = false
+	    VecSet(is_not_independent_nonlocal, 0);
+	    //for all unknown points P
+	    {
+		RawVector node_type_nonlocal_raw(node_type_nonlocal);
+		RawVector w_nonlocal_raw(w_nonlocal);
+		RawVector is_not_independent_nonlocal_raw(is_not_independent_nonlocal);
+		FOREACH(P, unknown) {
+		    //get weight(P)
+		    PetscScalar weight_P = w_nonlocal_raw.at(nonlocal_map[*P]);
+
+		    //for all dependencies K of P (K st P->K)
+		    for (PetscInt ii=0; ii<dep_nonlocal_raw.nnz_in_row(nonlocal_map[*P]); ii++) {
+			PetscInt K = dep_nonlocal_raw.col(nonlocal_map[*P], ii);
+			//skip if K is fine/coarse
+			/*
+			  Notice that we don't have to consider the
+			  independent set we've been generating here.  By
+			  construction, if K is in the independent set, then P
+			  cannot be in the independent set.
+			*/
+			if (node_type_nonlocal_raw.at(nonlocal_map[K]) != UNKNOWN) {
+			    continue;
+			}
+
+			//skip if P->K is marked
+			if (dep_nonlocal_raw.is_marked(nonlocal_map[*P], ii)) {
+			    continue;
+			}
+		    
+			//get weight(K)
+			PetscScalar weight_K = w_nonlocal_raw.at(nonlocal_map[K]);
+
+			if (weight_K <= weight_P) {
+			    //is_not_independent(K) = true
+			    is_not_independent_nonlocal_raw.at(nonlocal_map[K]) = 1;
+			} else { // (weight(P) < weight_K)
+			    is_not_independent_nonlocal_raw.at(nonlocal_map[*P]) = 1;
+			}
+		    }
+		}
+	    }
+
+	    LTRACE();
+	    //VecView(is_not_independent_nonlocal, PETSC_VIEWER_STDOUT_WORLD);
+
+	    //reconstruct is_not_independent vector with a ADD_VALUES, which
+	    //performs boolean OR
+	    VecSet(is_not_independent, 0);
+	    VecScatterBegin(nonlocal_scatter, is_not_independent_nonlocal, is_not_independent, ADD_VALUES, SCATTER_REVERSE);
+	    VecScatterEnd(nonlocal_scatter, is_not_independent_nonlocal, is_not_independent, ADD_VALUES, SCATTER_REVERSE);
+	    IntSet new_coarse_points;
+	    {
+		RawVector is_not_independent_raw(is_not_independent);
+		//for all unknown points P
+		FOREACH(P, unknown) {
+		    //if (!is_not_independent(P))
+		    if (is_not_independent_raw.at(*P) == 0) {
+			new_coarse_points.insert(*P);
+			SHOWVAR(*P, d);
+		    }
+		}
+	    }
+	    //Post: new coarse points (independent set)
+
+	    LTRACE();
+
+
+	    //Pre: independent set
+	    {
+		RawVector node_type_raw(node_type);
+		// for each independent point
+		FOREACH(I, new_coarse_points) {
+		    //mark that point as coarse
+		    node_type_raw.at(*I) = COARSE;
+		    unknown.erase(*I);
+		}
+	    }
+	    //Post: updated coarse local
+
+	    LTRACE();
+
+	    //Pre: updated coarse local
+	    //scatter changes to other processors
+	    VecScatterBegin(nonlocal_scatter, node_type, node_type_nonlocal, INSERT_VALUES, SCATTER_FORWARD);
+	    VecScatterEnd(nonlocal_scatter, node_type, node_type_nonlocal, INSERT_VALUES, SCATTER_FORWARD);
+	    //Post: updated coarse non-local
+
+	    LTRACE();
+
+	    //Pre: updated coarse non-local, new local coarse points
+	    VecSet(w_update_nonlocal, 0);
+	    {
+		RawVector node_type_nonlocal_raw(node_type_nonlocal);
+		RawVector w_update_nonlocal_raw(w_update_nonlocal);
+		//for all new coarse points C
+		FOREACH(C, new_coarse_points) {
+		    //for all K st C->K
+		    for(PetscInt ii=0; ii<dep_nonlocal_raw.nnz_in_row(nonlocal_map[*C]); ii++) {
+			//mark (C->K)
+			dep_nonlocal_raw.mark(nonlocal_map[*C], ii);
+			PetscInt K = dep_nonlocal_raw.col(nonlocal_map[*C], ii);
+			//if K is unknown
+			if (node_type_nonlocal_raw.at(nonlocal_map[K]) == UNKNOWN) {
+			    //measure(K)--
+			    w_update_nonlocal_raw.at(nonlocal_map[K]) -= 1;
+			}
+		    }
+		}
+
+		//for all unknown points I
+		FOREACH(I, unknown) {
+		    IntSet common_coarse;
+		    //for all (J->K)
+		    for (PetscInt kk=0; kk<dep_nonlocal_raw.nnz_in_row(nonlocal_map[*I]); kk++) { 
+			if (!dep_nonlocal_raw.is_marked(nonlocal_map[*I], kk)) {
+			    //if K is coarse
+			    PetscInt K = dep_nonlocal_raw.col(nonlocal_map[*I], kk);
+			    if (node_type_nonlocal_raw.at(nonlocal_map[K]) == COARSE) {
+				//mark K as common coarse
+				common_coarse.insert(K);
+				//mark (J->K) if unmarked
+				dep_nonlocal_raw.mark(nonlocal_map[*I], kk);
+			    }
+			}
+		    }
+
+		    //for all unmarked (I->J)
+		    for (PetscInt jj=0; jj<dep_nonlocal_raw.nnz_in_row(nonlocal_map[*I]); jj++) {
+			if (!dep_nonlocal_raw.is_marked(nonlocal_map[*I], jj)) {
+			    //for all (J->K), marked or no
+			    PetscInt J = dep_nonlocal_raw.col(nonlocal_map[*I], jj);
+			    for(PetscInt kk=0; kk<dep_nonlocal_raw.nnz_in_row(nonlocal_map[J]); kk++) {
+				//if K is in layer or ghost layer and common-coarse
+				PetscInt K = dep_nonlocal_raw.col(nonlocal_map[J], kk);
+				if (is_member(K, common_coarse)) {
+				    //mark (I->J)
+				    dep_nonlocal_raw.mark(nonlocal_map[*I], jj);
+				    //measure(J)--
+				    w_update_nonlocal_raw.at(nonlocal_map[J]) -= 1;
+				}
+			    }
+			}
+		    }
+		}
+	    }
+	    //Post: nonlocal update to local weights
+
+	    LTRACE();
+	    
+	    //Pre: local weights, update to local weights
+	    VecScatterBegin(nonlocal_scatter, w_update_nonlocal, w, ADD_VALUES, SCATTER_REVERSE);
+	    VecScatterEnd(nonlocal_scatter, w_update_nonlocal, w, ADD_VALUES, SCATTER_REVERSE);
+	    //Post: local weights updated
+
+	    //VecView(w, PETSC_VIEWER_STDOUT_WORLD);
+	    
+	    //Pre: local weights, local node type
+	    {
+		RawVector w_raw(w);
+		RawVector node_type_raw(node_type);
+		IntSet new_fine_points;
+		FOREACH(P, unknown) {
+		    if (w_raw.at(*P) < 1) {
+			w_raw.at(*P) = 0;
+			new_fine_points.insert(*P);
+			node_type_raw.at(*P) = FINE;
+		    }
+		}
+		FOREACH(F, new_fine_points) {
+		    unknown.erase(*F);
+		}
+		FOREACH(C, new_coarse_points) {
+		    w_raw.at(*C) = 0;
+		}
+	    }
+	    //Post: updated node type (with fine points), updated local weights
+
+	    LTRACE();
+
+	    VecScatterBegin(nonlocal_scatter, node_type, node_type_nonlocal, INSERT_VALUES, SCATTER_FORWARD);
+	    VecScatterEnd(nonlocal_scatter, node_type, node_type_nonlocal, INSERT_VALUES, SCATTER_FORWARD);
+	    VecScatterBegin(nonlocal_scatter, w, w_nonlocal, INSERT_VALUES, SCATTER_FORWARD);
+	    VecScatterEnd(nonlocal_scatter, w, w_nonlocal, INSERT_VALUES, SCATTER_FORWARD);
+	    //Post: non-local weights
+
+	    //finally, determine if we should run the loop again.
+	    //if one processor has a non-empty unknown set, then
+	    //we need to rerun the loop.
+	    int my_points_partitioned = unknown.empty();
+	    MPI_Allreduce(&my_points_partitioned, &all_points_partitioned, 1, MPI_INT, MPI_LAND, PETSC_COMM_WORLD);
+	    SHOWVAR(all_points_partitioned, d);
+	    //all_points_partitioned = true;
+	}
+    }
+
+    MatDestroy(extended_depend_mat);
+    VecDestroy(node_type);
+    VecDestroy(node_type_nonlocal);
+    VecDestroy(is_not_independent);    
+    VecDestroy(is_not_independent_nonlocal);
+    VecDestroy(w_update_nonlocal);
+    VecDestroy(w_nonlocal);
+    VecScatterDestroy(nonlocal_scatter);
+    VecDestroy(w);
+}
+
+/*
+    while(0) {
+	char fname[] = "weightsXXX";
+	char selection_graph[] = "selectionXXX";
+	sprintf(fname, "weights%03d", inc);
+	sprintf(selection_graph, "selection%03d", inc);
+	inc++;
+
+	PetscViewer view;
+	PetscViewerBinaryMatlabOpen(PETSC_COMM_WORLD, fname, &view);
+	PetscViewerBinaryMatlabOutputVecDA(view, "z", w, user->da);
+	PetscViewerBinaryMatlabDestroy(view);
+
+	PetscViewerBinaryMatlabOpen(PETSC_COMM_WORLD, selection_graph, &view);
+	PetscViewerBinaryMatlabOutputVecDA(view, "z", coarse_vs_fine, user->da);
+	PetscViewerBinaryMatlabDestroy(view);
+
 	//select an independent set of points D
 	IntSet independent;
 	/**
@@ -403,7 +728,7 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 	   iff w(j) > w(k), where k is the set of nodes that either
 	   depend on or influence j.  Therefore, use the neighbors
 	   matrix.
-	*/
+	/
 	//get weights from neighbors
 	VecScatterBegin(needed_scatter, w, w_needed, INSERT_VALUES, SCATTER_FORWARD);
 	VecScatterEnd(needed_scatter, w, w_needed, INSERT_VALUES, SCATTER_FORWARD);
@@ -439,7 +764,11 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 	    unknown.erase(*iter);
 	    coarse.push_back(*iter);
 	    local_weights[*iter-start] = 0;
+	    VecSetValue(coarse_vs_fine, *iter, COARSE, INSERT_VALUES);
 	}
+
+	VecAssemblyBegin(coarse_vs_fine);
+	VecAssemblyEnd(coarse_vs_fine);
 
 	////////////////////////////////////////////////////////
 
@@ -459,7 +788,7 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 	       points in the neighborhood of the new coarse points.
 	       However, in my case getting the list of weight updates
 	       across processor boundaries is difficult and tedious.
-	    */
+	    /
 	    // for each point P that influences c
 	    for (int col_index = influences_raw.ia[*iter-start];
 		 col_index < influences_raw.ia[*iter-start+1];
@@ -544,36 +873,11 @@ cljp_coarsening(Mat influences, Mat depends_on, IS *pCoarse) {
 	//SHOWVAR(all_points_partitioned, d);
 	//all_points_partitioned = true;
     }
-
-    VecDestroy(w_needed);
-    VecScatterDestroy(needed_scatter);
-    VecDestroy(w);
-
-    {
-	PetscTruth done;
-	MatRestoreRowIJ(extended_depend_mat, 0, PETSC_FALSE, PETSC_FALSE, 
-			&extended_matrix_size, &extended_rowbound, &extended_col_index, &done);
-    }
-    MatDestroy(extended_depend_mat);
-
-    //clean up the neighbors matrix
-    MatDestroy(neighbors);
-
-
-}
+//*/
 
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////
-
-const char     *bcTypes[2] = {"dirichlet","neumann"};
-typedef enum {DIRICHLET, NEUMANN} BCType;
-typedef struct {
-    PetscScalar   rho;
-    PetscScalar   nu;
-    BCType        bcType;
-    DA da;
-} UserContext;
 
 
 PetscErrorCode ComputeRHS(UserContext *user, Vec *pb)
@@ -714,7 +1018,9 @@ main(int argc, char** argv) {
 
   PetscInitialize(&argc,&argv,(char *)0,PETSC_NULL);
 
-  ierr = DACreate2d(PETSC_COMM_WORLD,DA_NONPERIODIC,DA_STENCIL_BOX,-3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,0,0,&user.da);CHKERRQ(ierr);  
+  ierr = DACreate2d(PETSC_COMM_WORLD,DA_NONPERIODIC,DA_STENCIL_BOX,-3,-3,PETSC_DECIDE,PETSC_DECIDE,1,1,0,0,&user.da);CHKERRQ(ierr);
+  DASetFieldName(user.da, 0, "z");
+  DAView(user.da, PETSC_VIEWER_STDOUT_WORLD);
 
   Vec b;
   ComputeRHS(&user, &b);
@@ -735,7 +1041,7 @@ main(int argc, char** argv) {
   //MatView(provides_to, PETSC_VIEWER_DRAW_WORLD);
   
   IS coarse;
-  cljp_coarsening(provides_to, requests_from, &coarse);
+  cljp_coarsening(requests_from, &coarse, &user);
   
   MatDestroy(provides_to);
   MatDestroy(requests_from);
