@@ -56,3 +56,32 @@ void
 build_strength_matrix(Mat A, PetscReal theta, Mat* strength);
 
 void get_compliment(Mat A, IS coarse, IS *pFine);
+
+
+void
+find_influences
+/////////////////////////////////////////////////////////////
+/** 
+ */
+(
+ Mat graph,
+ //graph of non-zero structure
+ IS wanted,
+ //nodes we are interested in.  Contains different values on each processor.
+ IS *is_influences
+ //all the influences of the nodes we are interested in.
+ );
+
+void
+find_influences_with_tag
+//////////////////////////////////////
+(
+ Mat A,
+ /// Matrix
+ IS interest_set,
+ /// set of points we're interested in.  Local rows only?
+ IS tag,
+ /// tag we'd like to select from.  Local rows only.
+ IS *pInfluences
+ /// Set of influences we need.  Nonlocal by def.
+ );

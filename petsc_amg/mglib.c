@@ -396,7 +396,6 @@ struct NonlocalCollection {
 	VecDestroy(w);
 
 	ISDestroy(onto_index_set);
-
     }
 
     ~NonlocalCollection() {
@@ -776,6 +775,8 @@ void get_compliment(Mat A, IS coarse, IS *pFine) {
     }
     assert(cursor == num_coarse);
     ISRestoreIndices(coarse, &coarse_points);
+
+    ISCreateGeneral(PETSC_COMM_WORLD, fine_points.size(), &fine_points[0], pFine);
 }
 
 
@@ -792,9 +793,41 @@ find_influences_with_tag
  IS *pInfluences
  /// Set of influences we need.  Nonlocal by def.
  ) {
-    IS all_depend;
-    find_influences(A, interest_set, &all_depend);
-    std::map<PetscInt, PetscInt> a;
+    NonlocalCollection nonlocal(A, interest_set);
+    Vec coarse_marker;
+    MatGetVecs(A, PETSC_NULL, &coarse_marker);
+    VecSet(coarse_marker, 0);
+    {
+	RawVector marker_raw(coarse_marker);
+
+	PetscInt tag_size;
+	ISGetLocalSize(tag, &tag_size);
+	PetscInt *tag_index;
+	ISGetIndices(tag, &tag_index);
+	for (int ii=0; ii<tag_size; ii++) {
+	    marker_raw.at(tag_index[ii]) = 1;
+	}
+	ISRestoreIndices(tag, &tag_index);
+    }
+    VecScatterBegin(nonlocal.scatter, coarse_marker, nonlocal.vec, INSERT_VALUES, SCATTER_FORWARD);
+    VecScatterEnd(nonlocal.scatter, coarse_marker, nonlocal.vec, INSERT_VALUES, SCATTER_FORWARD);
+    VecDestroy(coarse_marker);
+    //Finally!  Collect all the terms in the nonlocal vector that have been marked.
+    std::vector<PetscInt> depend_tag;
+    {
+	RawVector nonlocal_raw(nonlocal.vec);
+	FOREACH(iter, nonlocal.map) {
+	    //SHOWVAR(iter->first, d);
+	    if (nonlocal_raw.at(iter->first) == 1) {
+		//SHOWVAR(iter->second, d);
+		depend_tag.push_back(iter->second); 
+	    }
+	}
+    }
+    //Now that we have the points, create the index set.
+    ISCreateGeneral(PETSC_COMM_WORLD, depend_tag.size(), &depend_tag[0], pInfluences);
+
+    //everything else destroyed by destructors.
 }
 
 void
