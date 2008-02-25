@@ -17,7 +17,7 @@ clean:
 	${CXX} -c ${PCC_FLAGS} ${COPTFLAGS} ${CFLAGS} ${CCPPFLAGS} $(FLAGS) -c  -o $@ $<
 
 %.o: %.c  
-	${PCC} -c ${PCC_FLAGS} ${COPTFLAGS} ${CFLAGS} ${CCPPFLAGS} $(FLAGS) -c  -o $@ $<
+	${CXX} -c ${PCC_FLAGS} ${COPTFLAGS} ${CFLAGS} ${CCPPFLAGS} $(FLAGS) -c  -o $@ $<
 
 %: %.c #Disable default makefile rule.
 %: %.cc 
