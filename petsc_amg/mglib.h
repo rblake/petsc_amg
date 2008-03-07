@@ -85,3 +85,17 @@ find_influences_with_tag
  IS *pInfluences
  /// Set of influences we need.  Nonlocal by def.
  );
+
+
+void
+construct_amg_prolongation
+(
+ /// index map of local to higher points
+ IS coarse,
+ IS fine,
+ IS depend_strong,
+ IS depend_weak,
+ IS depend_coarse,
+ Mat A,
+ Mat* pmat
+ );
