@@ -460,6 +460,7 @@ struct RawIS {
     at(PetscInt index) {
 	return data[index];
     }
+
 };
 
 
@@ -960,6 +961,18 @@ construct_amg_prolongation
     icol[Fp_Dpw] = depend_weak;
 
     MatGetSubMatrices(A, num_submatrix, irow, icol, MAT_INITIAL_MATRIX, &local_submatrix);
+
+    ISView(fine, PETSC_VIEWER_STDOUT_WORLD);
+    ISView(depend_coarse, PETSC_VIEWER_STDOUT_WORLD);
+    MatView(local_submatrix[Fp_Dpc], PETSC_VIEWER_STDOUT_WORLD);
+
+    ISView(fine, PETSC_VIEWER_STDOUT_WORLD);
+    ISView(depend_strong, PETSC_VIEWER_STDOUT_WORLD);
+    MatView(local_submatrix[Fp_Dps], PETSC_VIEWER_STDOUT_WORLD);
+
+    ISView(depend_strong, PETSC_VIEWER_STDOUT_WORLD);
+    ISView(depend_coarse, PETSC_VIEWER_STDOUT_WORLD);
+    MatView(local_submatrix[Dps_Dpc], PETSC_VIEWER_STDOUT_WORLD);
     
     // Note, due to RS C1, we know that the Fp_Dpc matrix has 
     // the same non-zero pattern as the Fp_Dps x Dps_Dpc matrix
@@ -987,6 +1000,10 @@ construct_amg_prolongation
 
 	      Note, due to RS C1, every row of a_KJ will have at least one nonzero.
 	      Due to M matrix, every row of a_KJ will sum to something other than 1.
+
+	      Note, due to the way I've done things, diagonal entries might 
+	      get counted in each row's K set.  Let all these values be
+	      0, corresponds to a no-op when we perform matrix vec mult.
 	    */
 	    PetscInt size_K = fine_to_strong_raw.nnz_in_row(ii);
 	    PetscInt size_J = fine_to_coarse_raw.nnz_in_row(ii);
@@ -1001,29 +1018,29 @@ construct_amg_prolongation
 	    //fill in the a_KJ matrix.
 	    for (PetscInt kk_offset = 0; kk_offset < size_K; kk_offset++) {
 		PetscInt kk = fine_to_strong_raw.col(ii, kk_offset);
+		//Skip if we accidentally picked up diagonal.
+		{ 
+		    RawIS fine_raw(fine);
+		    RawIS depend_strong_raw(depend_strong);
+		    if (fine_raw.at(ii) == depend_strong_raw.at(kk)) { continue; }
+		}
 		
 		//find the appropriate row in the local matrix.
 		//Assume index sets are in ascending order.
-		PetscInt row_in_s2c;
-		{
-		    RawIS depend_strong_raw(depend_strong);
-		    PetscInt* begin = &depend_strong_raw.at(0);
-		    PetscInt* end = &depend_strong_raw.at(depend_strong_raw.size());
-		    PetscInt* temp = std::lower_bound(begin, end, kk);
-		    assert(temp != end);
-		    row_in_s2c = *temp;
-		}
+		PetscInt row_in_s2c = kk;
 
 		//iterate through coarse_interp and strong_interp for this ii.
 		//Assume rows are sorted in ascending order.
 
 		PetscInt coarse_cursor = 0;
 		PetscInt strong_cursor = 0;
+		bool at_least_one_nonzero_per_row = false;
 		while (coarse_cursor < size_J && strong_cursor < strong_to_coarse_raw.nnz_in_row(row_in_s2c)) {
 		    PetscInt coarse_col = fine_to_coarse_raw.col(ii, coarse_cursor);
 		    PetscInt strong_col = strong_to_coarse_raw.col(row_in_s2c, strong_cursor);
 		    if (coarse_col == strong_col) {
 			a_KJ[kk_offset][coarse_cursor] = strong_to_coarse_raw.entry(row_in_s2c, strong_cursor);
+			at_least_one_nonzero_per_row = true;
 			coarse_cursor++;
 			strong_cursor++;
 		    } else if (coarse_col > strong_col) {
@@ -1032,8 +1049,8 @@ construct_amg_prolongation
 			coarse_cursor++;
 		    }
 		}
+		assert(at_least_one_nonzero_per_row);
 	    }
-
 	    // fill in the a_iK matrix
 	    for (PetscInt kk_offset = 0; kk_offset < size_K; kk_offset++) {
 		a_iK[kk_offset] = fine_to_strong_raw.entry(ii, kk_offset);
@@ -1045,8 +1062,13 @@ construct_amg_prolongation
 		for (PetscInt jj_offset = 0; jj_offset < size_J; jj_offset++) {
 		    sum += a_KJ[kk_offset][jj_offset];
 		}
-		assert(sum != 0);
-		a_iK[kk_offset] /= sum;
+		// extra check to account for depend strong == fine for 1D case.
+		// we skipped updating the matrix for these diagonal entries above.
+		// This should be the only time that sum==0, so this operation should
+		// be safe.
+		if (sum != 0) {
+		    a_iK[kk_offset] /= sum;
+		}
 	    }
 
 	    //perform the full matrix multiplication.  These matricies should be small,
