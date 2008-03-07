@@ -191,6 +191,8 @@ main(int argc, char** argv) {
   cljp_coarsening(requests_from, &coarse);  
   IS fine;
   get_compliment(A, coarse, &fine);
+  if (1) {
+
   IS depend_coarse;
   find_influences_with_tag(A, fine, coarse, &depend_coarse);
   
@@ -206,14 +208,13 @@ main(int argc, char** argv) {
       ISDestroy(tmp1);
   }
   
-  if (1) {
       Mat P;
       construct_amg_prolongation(coarse, fine, depend_strong, depend_weak, depend_coarse, A, &P);
-  }
 
   ISDestroy(depend_weak);
   ISDestroy(depend_strong);
   ISDestroy(depend_coarse);
+  }
   ISDestroy(fine);
   ISDestroy(coarse);
 

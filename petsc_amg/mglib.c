@@ -1083,14 +1083,13 @@ construct_amg_prolongation
     }
 
     //Finally!  Now we can do the fun stuff.  Construct weights in the numerator
-    MatAYPX(strong_interp, -1, fine_to_coarse, SAME_NONZERO_PATTERN);
+    MatAYPX(strong_interp, 1, fine_to_coarse, SAME_NONZERO_PATTERN);
 
     //Get denominator weights.    
     Vec denominator;
     {
 	MatGetVecs(local_submatrix[Fp_Dpw], PETSC_NULL, &denominator);
 	MatGetRowSum(local_submatrix[Fp_Dpw], denominator);
-	VecScale(denominator, -1);
 	// Add entries from the diagonal
 	Vec diagonal;
 	MatGetVecs(A, PETSC_NULL, &diagonal);
@@ -1110,6 +1109,7 @@ construct_amg_prolongation
 	VecDestroy(diagonal);
     }
 
+    VecScale(denominator, -1);
     VecReciprocal(denominator);
     MatDiagonalScale(strong_interp, denominator, PETSC_NULL);
     VecDestroy(denominator);
