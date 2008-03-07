@@ -195,20 +195,20 @@ main(int argc, char** argv) {
   find_influences_with_tag(A, fine, coarse, &depend_coarse);
   
   if (0) {
-  IS depend_strong;
-  find_influences_with_tag(requests_from, fine, fine, &depend_strong);
-  IS depend_weak;
-  {
-      IS all, tmp1;
-      find_influences(A, fine, &all);
-      ISDifference(all, depend_coarse, &tmp1);
-      ISDestroy(all);
-      ISDifference(tmp1, depend_strong, &depend_weak);
-      ISDestroy(tmp1);
-  }
+      IS depend_strong;
+      find_influences_with_tag(requests_from, fine, fine, &depend_strong);
+      IS depend_weak;
+      {
+	  IS all, tmp1;
+	  find_influences(A, fine, &all);
+	  ISDifference(all, depend_coarse, &tmp1);
+	  ISDestroy(all);
+	  ISDifference(tmp1, depend_strong, &depend_weak);
+	  ISDestroy(tmp1);
+      }
 
-  ISDestroy(depend_weak);
-  ISDestroy(depend_strong);
+      ISDestroy(depend_weak);
+      ISDestroy(depend_strong);
   }
   ISDestroy(depend_coarse);
   ISDestroy(fine);

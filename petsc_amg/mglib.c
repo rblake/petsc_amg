@@ -4,6 +4,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <algorithm>
 
 
 float
@@ -273,20 +274,85 @@ find_influences
     ISCreateGeneral(PETSC_COMM_WORLD, all_influences.size(), &all_influences[0], is_influences);
 }
 
+struct RawSeqMatrix {
+    PetscInt *ia;
+    PetscInt *ja;
+    PetscScalar *data;
+    PetscInt nrows;
+    Mat mat;
+    bool valid;
+
+    RawSeqMatrix() { valid = false; };
+
+    RawSeqMatrix(Mat new_mat) { create(new_mat); }
+
+    void
+    create(Mat new_mat) {
+	mat = new_mat;
+	//For this code to work, we're going to need the matrix structure for the sequential portion of this matrix.
+	//Therefore, extract a sequential AIJ matrix.
+	MatType type;
+	MatGetType(mat, &type);
+	assert(!strcmp(type, MATSEQAIJ));
+
+	PetscTruth done = PETSC_FALSE;
+	MatGetRowIJ(mat, 0, PETSC_FALSE, PETSC_FALSE, &nrows, &ia, &ja, &done);
+	assert(done == PETSC_TRUE || "Unexpected error: can't get csr structure from matrix");
+	MatGetArray(mat, &data);
+	valid = true;
+    }
+    
+    ~RawSeqMatrix() {
+	destroy();
+    }
+
+    void
+    destroy() {
+	if (valid) {
+	    //clean up the local array structures I allocated.
+	    MatRestoreArray(mat, &data);
+	    PetscTruth done = PETSC_FALSE;
+	    MatRestoreRowIJ(mat, 0, PETSC_FALSE, PETSC_FALSE, &nrows, &ia, &ja, &done);
+	    assert(done == PETSC_TRUE || "Unexpected error: can't return csr structure to matrix");
+	}
+	valid = false;
+    }
+
+    inline
+    PetscInt
+    nnz_in_row(PetscInt row) {
+	return ia[row+1]-ia[row];
+    }
+
+    inline
+    PetscInt*
+    row_pointer(PetscInt row) {
+	return &(ja[ia[row]]);
+    }
+
+    inline
+    PetscInt
+    col(PetscInt row, PetscInt row_index) {
+	return row_pointer(row)[row_index];
+    }
+
+    PetscScalar&
+    entry(PetscInt row, PetscInt row_index) {
+	return data[ia[row]+row_index];
+    }
+
+};
 
 /** Gets the graph structure in CSR format for the local rows of a global matrix
     It automatically allocates all the information it needs in construction and deallocates all
     the memory during deconstruction.  Yay RAII.
 */
 struct RawGraph {
-    PetscInt *ia;
-    PetscInt *ja;
-    PetscScalar *data;
-    PetscInt local_nrows;
     PetscInt row_begin;
     PetscInt row_end;
     Mat global_mat;
     Mat local_mat;
+    RawSeqMatrix seq_raw;
 
     RawGraph(Mat new_global_mat) {
 	global_mat = new_global_mat;
@@ -303,44 +369,49 @@ struct RawGraph {
 	MatGetOwnershipRange(global_mat, &row_begin, &row_end);
 	//MatView(local_mat, PETSC_VIEWER_DRAW_SELF);
 
-	PetscTruth done = PETSC_FALSE;
-	MatGetRowIJ(local_mat, 0, PETSC_FALSE, PETSC_FALSE, &local_nrows, &ia, &ja, &done);
-	assert(done == PETSC_TRUE || "Unexpected error: can't get csr structure from matrix");
-	MatGetArray(local_mat, &data);
+	seq_raw.create(local_mat);
     }
     
     ~RawGraph() {
 	//clean up the local array structures I allocated.
-	MatRestoreArray(local_mat, &data);
-	PetscTruth done = PETSC_FALSE;
-	MatRestoreRowIJ(local_mat, 0, PETSC_FALSE, PETSC_FALSE, &local_nrows, &ia, &ja, &done);
-	assert(done == PETSC_TRUE || "Unexpected error: can't return csr structure to matrix");
+	seq_raw.destroy();
 	MatDestroy(local_mat);
     }
 
     PetscInt
+    local_nrows() {
+	return row_end-row_begin;
+    };
+
+    /** takes the local row index as a parameter.  The first row starts at 0 */
+    PetscInt
+    ia(PetscInt index) {
+	return seq_raw.ia[index];
+    }
+
+    PetscInt
     nnz_in_row(PetscInt row) {
-	return ia[row-row_begin+1]-ia[row-row_begin];
+	return seq_raw.nnz_in_row(row-row_begin);
     }
 
     PetscInt*
     row_pointer(PetscInt row) {
-	return &(ja[ia[row-row_begin]]);
+	return seq_raw.row_pointer(row-row_begin);
     }
 
     PetscInt
     col(PetscInt row, PetscInt row_index) {
-	return row_pointer(row)[row_index];
+	return seq_raw.col(row-row_begin, row_index);
     }
 
     void
     mark(PetscInt row, PetscInt row_index) {
-	data[ ia[row-row_begin]+row_index ] = 1;
+	seq_raw.entry(row-row_begin, row_index) = 1;
     }
     
     bool
     is_marked(PetscInt row, PetscInt row_index) {
-	return (data[ ia[row-row_begin]+row_index ] == 1);
+	return seq_raw.entry(row-row_begin, row_index) == 1;
     }
 	
 };
@@ -364,6 +435,33 @@ struct RawVector {
     PetscScalar& at(PetscInt index) { return data[index-begin]; } 
 
 };
+
+struct RawIS {
+    PetscInt local_size;
+    PetscInt* data;
+    IS is;
+    
+    RawIS(IS new_is) {
+	is = new_is;
+	ISGetLocalSize(is, &local_size);
+	ISGetIndices(is, &data);
+    }
+
+    ~RawIS() {
+	ISRestoreIndices(is, &data);
+    }
+
+    PetscInt
+    size() {
+	return local_size;
+    }
+
+    PetscInt&
+    at(PetscInt index) {
+	return data[index];
+    }
+};
+
 
 template <typename T>
 bool
@@ -436,13 +534,13 @@ cljp_coarsening(Mat depends_on, IS *pCoarse) {
 	MatTranspose(depends_on, &influences);
 	{
 	    RawGraph influences_raw(influences);
-	    assert(influences_raw.local_nrows == end-start);
+	    assert(influences_raw.local_nrows() == end-start);
 	    //Initialize the weight vector with \norm{S^T_i} + \sigma(i)
 	    PetscScalar *local_weights;
 	    VecGetArray(w, &local_weights);
-	    for (int local_row=0; local_row < influences_raw.local_nrows; local_row++) {
+	    for (int local_row=0; local_row < influences_raw.local_nrows(); local_row++) {
 		local_weights[local_row] = 
-		    influences_raw.ia[local_row+1]-influences_raw.ia[local_row] + frand();
+		    influences_raw.ia(local_row+1)-influences_raw.ia(local_row) + frand();
 	    }
 	    VecRestoreArray(w, &local_weights);
 	}
@@ -866,85 +964,140 @@ construct_amg_prolongation
     // Note, due to RS C1, we know that the Fp_Dpc matrix has 
     // the same non-zero pattern as the Fp_Dps x Dps_Dpc matrix
     
-    Vec row_sum;
-    MatGetVecs(local_submatrix[Dps_Dpc], PETSC_NULL, &row_sum);
-    MatGetRowSum(local_submatrix[Dps_Dpc], row_sum);
-    VecReciprocal(row_sum);
-    MatDiagonalScale(local_submatrix[Dps_Dpc], row_sum, PETSC_NULL);
-    VecDestroy(row_sum);
-
-    Mat result;
-    MatMatMult(local_submatrix[Fp_Dps], local_submatrix[Dps_Dpc], 
-	       MAT_INITIAL_MATRIX, 4, &result);
+    Mat fine_to_coarse = local_submatrix[Fp_Dpc];
+    Mat strong_to_coarse = local_submatrix[Dps_Dpc];
+    Mat fine_to_strong = local_submatrix[Fp_Dps];
+    Mat strong_interp;
+    MatDuplicate(fine_to_coarse, MAT_DO_NOT_COPY_VALUES, &strong_interp);
+    MatZeroEntries(strong_interp);
     
-    //Because of the special form of result, we should be able to optimize this
-    //addition.  Both matricies should have the same non-zero structure.
-    
-    //TODO: add a check here to verify that assertion.
+    {
+	RawSeqMatrix strong_to_coarse_raw(strong_to_coarse);
+	RawSeqMatrix fine_to_strong_raw(fine_to_strong);
+	RawSeqMatrix fine_to_coarse_raw(fine_to_coarse);
+	RawSeqMatrix strong_interp_raw(strong_interp);
+	for (PetscInt ii=0; ii < strong_interp_raw.nrows; ii++) {
+	    /** ok, we need to perform the sum: 
+		strong_interp_ij = \sum_{k\in strong_F of i} (a_ik*a_kj/(\sum_{m \in coarse of i} a_km) )
+		
+	      To do this, for every row i I will construct the following mat-vec:
+	      
+	      a_iK * diag(rowsum(a_KJ)) * a_KJ = a_iJ
+	      where capital means all possible values.
 
-    MatAYPX(result, 1, local_submatrix[Fp_Dpc], SAME_NONZERO_PATTERN);
-    
-    MatGetVecs(local_submatrix[Fp_Dpw], PETSC_NULL, &row_sum);
-    // Add entries from the diagonal
-    VecReciprocal(row_sum);
-    VecScale(row_sum, -1);
-    MatDiagonalScale(result, row_sum, PETSC_NULL);
-    VecDestroy(row_sum);
+	      Note, due to RS C1, every row of a_KJ will have at least one nonzero.
+	      Due to M matrix, every row of a_KJ will sum to something other than 1.
+	    */
+	    PetscInt size_K = fine_to_strong_raw.nnz_in_row(ii);
+	    PetscInt size_J = fine_to_coarse_raw.nnz_in_row(ii);
+	    PetscScalar a_iK[size_K];
+	    PetscScalar a_KJ[size_K][size_J];
+	    for (int kk=0; kk<size_K; kk++) {
+		for (int jj=0; jj<size_J; jj++) {
+		    a_KJ[kk][jj] = 0;
+		}
+	    }
 
-    MatView(result, PETSC_VIEWER_DRAW_WORLD);
-    
-    return;
+	    //fill in the a_KJ matrix.
+	    for (PetscInt kk_offset = 0; kk_offset < size_K; kk_offset++) {
+		PetscInt kk = fine_to_strong_raw.col(ii, kk_offset);
+		
+		//find the appropriate row in the local matrix.
+		//Assume index sets are in ascending order.
+		PetscInt row_in_s2c;
+		{
+		    RawIS depend_strong_raw(depend_strong);
+		    PetscInt* begin = &depend_strong_raw.at(0);
+		    PetscInt* end = &depend_strong_raw.at(depend_strong_raw.size());
+		    PetscInt* temp = std::lower_bound(begin, end, kk);
+		    assert(temp != end);
+		    row_in_s2c = *temp;
+		}
 
-    /*
-    Vec interp_scale;
+		//iterate through coarse_interp and strong_interp for this ii.
+		//Assume rows are sorted in ascending order.
 
-    
-    PetscInt from_size;
-    ISGetSize(to_indicies, &from_size);
+		PetscInt coarse_cursor = 0;
+		PetscInt strong_cursor = 0;
+		while (coarse_cursor < size_J && strong_cursor < strong_to_coarse_raw.nnz_in_row(row_in_s2c)) {
+		    PetscInt coarse_col = fine_to_coarse_raw.col(ii, coarse_cursor);
+		    PetscInt strong_col = strong_to_coarse_raw.col(row_in_s2c, strong_cursor);
+		    if (coarse_col == strong_col) {
+			a_KJ[kk_offset][coarse_cursor] = strong_to_coarse_raw.entry(row_in_s2c, strong_cursor);
+			coarse_cursor++;
+			strong_cursor++;
+		    } else if (coarse_col > strong_col) {
+			strong_cursor++;
+		    } else {
+			coarse_cursor++;
+		    }
+		}
+	    }
 
-    
+	    // fill in the a_iK matrix
+	    for (PetscInt kk_offset = 0; kk_offset < size_K; kk_offset++) {
+		a_iK[kk_offset] = fine_to_strong_raw.entry(ii, kk_offset);
+	    }
 
-    PetscInt local_from_size;
-    ISGetLocalSize(to_indicies, &local_from_size);
-    MatCreateMPIAIJ(PETSC_COMM_WORLD,
-		    PETSC_DECIDE, //number of local rows
-		    local_from_size, //number of local cols
-		    to_size, //global rows
-		    from_size, //global cols
-		    // TODO: figure out what values should go here.
-		    3,         // upper bound of diagonal nnz per row
-		    PETSC_NULL, // array of diagonal nnz per row
-		    // TODO: figure out what values should go here
-		    2,         // upper bound of off-processor nnz per row
-		    PETSC_NULL, // array of off-processor nnz per row
-		    pmat); // matrix
-    
-    
+	    //do the diagonal matrix multiplication, apply it to a_iK.
+	    for (PetscInt kk_offset = 0; kk_offset < size_K; kk_offset++) {
+		PetscScalar sum = 0;
+		for (PetscInt jj_offset = 0; jj_offset < size_J; jj_offset++) {
+		    sum += a_KJ[kk_offset][jj_offset];
+		}
+		assert(sum != 0);
+		a_iK[kk_offset] /= sum;
+	    }
 
-    PetscInt start;
-    PetscInt end;
-    MatGetOwnershipRange(*pmat, &start, &end);
-    int ii;
-
-    void
-
-    //for all local rows
-    for (ii=start; ii<end; ii++) {
-	//if the point is a coarse point, 
-	if (0) {
-	    //introduce an identity row
-	    
-	} else {
-	    //otherwise, we have a fine point
-
-	    //add weights for other connected coarse points
-	    //add weights for other strongly connected fine points also
-
-	    //add weights for weak connections to other fine points
-
+	    //perform the full matrix multiplication.  These matricies should be small,
+	    //if this portion of the code becomes a bottle neck I can replace this with
+	    //a BLAS call.
+	    for (PetscInt jj_offset=0; jj_offset < size_J; jj_offset++) {
+		for (PetscInt kk_offset=0; kk_offset < size_K; kk_offset++) {
+		    strong_interp_raw.entry(ii, jj_offset) += a_iK[kk_offset]*a_KJ[kk_offset][jj_offset];
+		}
+	    }
 	}
     }
-    MatAssemblyBegin(*pmat, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(*pmat, MAT_FINAL_ASSEMBLY);
-    */
+
+    //Finally!  Now we can do the fun stuff.  Construct weights in the numerator
+    MatAYPX(strong_interp, -1, fine_to_coarse, SAME_NONZERO_PATTERN);
+
+    //Get denominator weights.    
+    Vec denominator;
+    {
+	MatGetVecs(local_submatrix[Fp_Dpw], PETSC_NULL, &denominator);
+	MatGetRowSum(local_submatrix[Fp_Dpw], denominator);
+	VecScale(denominator, -1);
+	// Add entries from the diagonal
+	Vec diagonal;
+	MatGetVecs(A, PETSC_NULL, &diagonal);
+	MatGetDiagonal(A, diagonal);
+	PetscInt *fine_indices;
+	PetscInt nfine_indices;
+	ISGetLocalSize(fine, &nfine_indices);
+	ISGetIndices(fine, &fine_indices);
+	{
+	    RawVector diagonal_raw(diagonal);
+	    RawVector denominator_raw(denominator);
+	    for (int ii=0; ii< nfine_indices; ii++) {
+		denominator_raw.at(ii) += diagonal_raw.at(fine_indices[ii]);
+	    }
+	}
+	ISRestoreIndices(fine, &fine_indices);
+	VecDestroy(diagonal);
+    }
+
+    VecReciprocal(denominator);
+    MatDiagonalScale(strong_interp, denominator, PETSC_NULL);
+    VecDestroy(denominator);
+
+    // fine x coarse matrix should now be complete.  Now, create the interpolation matrix.
+
+    MatView(strong_interp, PETSC_VIEWER_STDOUT_WORLD);
+
+
+    MatDestroyMatrices(num_submatrix, &local_submatrix);
+    return;
+
 }
