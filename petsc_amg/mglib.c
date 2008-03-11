@@ -5,6 +5,7 @@
 #include <set>
 #include <map>
 #include <algorithm>
+#include <cassert>
 
 
 float
@@ -916,10 +917,8 @@ find_influences_with_tag
     {
 	RawVector nonlocal_raw(nonlocal.vec);
 	FOREACH(iter, nonlocal.map) {
-	    //SHOWVAR(iter->first, d);
-	    if (nonlocal_raw.at(iter->first) == 1) {
-		//SHOWVAR(iter->second, d);
-		depend_tag.push_back(iter->second); 
+	    if (nonlocal_raw.at(iter->second) == 1) {
+		depend_tag.push_back(iter->first); 
 	    }
 	}
     }
@@ -964,15 +963,15 @@ construct_amg_prolongation
 
     ISView(fine, PETSC_VIEWER_STDOUT_WORLD);
     ISView(depend_coarse, PETSC_VIEWER_STDOUT_WORLD);
-    MatView(local_submatrix[Fp_Dpc], PETSC_VIEWER_STDOUT_WORLD);
+    MatView(local_submatrix[Fp_Dpc], PETSC_VIEWER_STDOUT_SELF);
 
     ISView(fine, PETSC_VIEWER_STDOUT_WORLD);
     ISView(depend_strong, PETSC_VIEWER_STDOUT_WORLD);
-    MatView(local_submatrix[Fp_Dps], PETSC_VIEWER_STDOUT_WORLD);
+    MatView(local_submatrix[Fp_Dps], PETSC_VIEWER_STDOUT_SELF);
 
     ISView(depend_strong, PETSC_VIEWER_STDOUT_WORLD);
     ISView(depend_coarse, PETSC_VIEWER_STDOUT_WORLD);
-    MatView(local_submatrix[Dps_Dpc], PETSC_VIEWER_STDOUT_WORLD);
+    MatView(local_submatrix[Dps_Dpc], PETSC_VIEWER_STDOUT_SELF);
     
     // Note, due to RS C1, we know that the Fp_Dpc matrix has 
     // the same non-zero pattern as the Fp_Dps x Dps_Dpc matrix
@@ -1115,11 +1114,13 @@ construct_amg_prolongation
     VecDestroy(denominator);
 
     // fine x coarse matrix should now be complete.  Now, create the interpolation matrix.
-
-    MatView(strong_interp, PETSC_VIEWER_STDOUT_WORLD);
-
-
     MatDestroyMatrices(num_submatrix, &local_submatrix);
+
+
+    MatView(strong_interp, PETSC_VIEWER_STDOUT_SELF);
+
+
+    MatDestroy(strong_interp);
     return;
 
 }
