@@ -1,8 +1,0 @@
-Warning: no access to tty (Bad file descriptor).
-Thus no job control in this shell.
-mcr109
-LCRM job id = 1666
-Running with these driver parameters:
-  solver ID    = 0
-
-Reading the mesh....................done.
